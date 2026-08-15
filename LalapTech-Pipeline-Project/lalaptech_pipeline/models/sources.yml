@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: laplaptech
+    database: "{{ env_var('LAPLAPTECH_SOURCE_DATABASE', target.database) }}"
+    schema: "{{ env_var('LAPLAPTECH_SOURCE_SCHEMA', 'laplaptech') }}"
+    tables:
+      - name: user_event_tracking
+      - name: brand
+      - name: cpu_model
+      - name: gpu_model
+      - name: laptop_benchmark_result
+      - name: laptop_model

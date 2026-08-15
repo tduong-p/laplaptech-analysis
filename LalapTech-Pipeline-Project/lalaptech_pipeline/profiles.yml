@@ -1,0 +1,12 @@
+clickhouse_da_pipeline:
+  target: bigquery
+  outputs:
+    bigquery:
+      type: bigquery
+      method: service-account-json
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: "{{ env_var('BIGQUERY_DBT_DATASET', 'laplaptech_dev') }}"
+      location: "{{ env_var('BIGQUERY_LOCATION', 'asia-southeast1') }}"
+      threads: 4
+      priority: interactive
+      keyfile_json: "{{ env_var('GCP_SERVICE_ACCOUNT_JSON') | as_native }}"

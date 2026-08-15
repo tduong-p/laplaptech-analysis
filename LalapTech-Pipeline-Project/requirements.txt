@@ -1,0 +1,5 @@
+clickhouse-connect==0.8.18
+dbt-bigquery==1.10.2
+google-cloud-bigquery==3.25.0
+pandas==2.2.3
+pyarrow==17.0.0

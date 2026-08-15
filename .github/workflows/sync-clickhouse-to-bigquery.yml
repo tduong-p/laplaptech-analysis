@@ -1,0 +1,56 @@
+name: Sync ClickHouse to BigQuery
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: LalapTech-Pipeline-Project
+
+    env:
+      CLICKHOUSE_HOST: ${{ secrets.CLICKHOUSE_HOST }}
+      CLICKHOUSE_PORT: ${{ secrets.CLICKHOUSE_PORT }}
+      CLICKHOUSE_USER: ${{ secrets.CLICKHOUSE_USER }}
+      CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+      CLICKHOUSE_DATABASE: ${{ secrets.CLICKHOUSE_DATABASE }}
+      CLICKHOUSE_SECURE: ${{ secrets.CLICKHOUSE_SECURE }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+      BIGQUERY_LOCATION: ${{ vars.BIGQUERY_LOCATION || 'asia-southeast1' }}
+      BIGQUERY_RAW_DATASET: ${{ vars.BIGQUERY_RAW_DATASET || 'laplaptech_raw' }}
+      BIGQUERY_DBT_DATASET: ${{ vars.BIGQUERY_DBT_DATASET || 'laplaptech_dev' }}
+      LAPLAPTECH_SOURCE_DATABASE: ${{ secrets.GCP_PROJECT_ID }}
+      LAPLAPTECH_SOURCE_SCHEMA: ${{ vars.BIGQUERY_RAW_DATASET || 'laplaptech_raw' }}
+      DBT_PROFILES_DIR: lalaptech_pipeline
+      RUN_DBT_BUILD: ${{ vars.RUN_DBT_BUILD || 'false' }}
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync raw data from ClickHouse to BigQuery
+        run: python ingestion/clickhouse_to_bigquery.py
+
+      - name: Validate dbt connection
+        if: env.RUN_DBT_BUILD == 'true'
+        run: dbt debug
+        working-directory: LalapTech-Pipeline-Project/lalaptech_pipeline
+
+      - name: Build dbt models on BigQuery
+        if: env.RUN_DBT_BUILD == 'true'
+        run: dbt build
+        working-directory: LalapTech-Pipeline-Project/lalaptech_pipeline

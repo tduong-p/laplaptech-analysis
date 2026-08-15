@@ -1,0 +1,31 @@
+# Ignore everything by default in this learning workspace.
+*
+
+# Keep GitHub Actions workflow.
+!.github/
+!.github/workflows/
+!.github/workflows/**
+
+# Keep the LaplapTech project.
+!LalapTech-Pipeline-Project/
+!LalapTech-Pipeline-Project/**
+
+# Keep this ignore file.
+!.gitignore
+
+# Common local files inside allowed folders.
+.DS_Store
+**/.DS_Store
+**/.env
+**/.venv/
+**/venv/
+**/env/
+**/__pycache__/
+**/*.pyc
+**/target/
+**/dbt_packages/
+**/logs/
+**/*.log
+**/profiles.yml
+!LalapTech-Pipeline-Project/lalaptech_pipeline/profiles.yml
+LalapTech-Pipeline-Project/.obsidian/
