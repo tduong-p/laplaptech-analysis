@@ -6,11 +6,11 @@ SELECT
     d.brand_id,
     b.name AS brand_name,
 
-    countDistinct(scd.session_id) AS compared_sessions,
-    min(scd.first_event_at) AS first_compared_at,
-    max(scd.last_event_at) AS last_compared_at
+    COUNT(DISTINCT scd.session_id) AS compared_sessions,
+    MIN(scd.first_event_at) AS first_compared_at,
+    MAX(scd.last_event_at) AS last_compared_at
 
-FROM {{ ref('int_session_compared_devices') }} AS scd
+FROM {{ ref('int_comparison_event') }} AS scd
 LEFT JOIN {{ ref('silver_laptop_model') }} AS d
     ON scd.device_id = d.id
 LEFT JOIN {{ ref('silver_brand') }} AS b

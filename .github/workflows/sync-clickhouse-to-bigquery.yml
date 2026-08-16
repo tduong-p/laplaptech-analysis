@@ -27,7 +27,7 @@ jobs:
       BIGQUERY_DBT_DATASET: ${{ vars.BIGQUERY_DBT_DATASET || 'laplaptech_dev' }}
       LAPLAPTECH_SOURCE_DATABASE: ${{ secrets.GCP_PROJECT_ID }}
       LAPLAPTECH_SOURCE_SCHEMA: ${{ vars.BIGQUERY_RAW_DATASET || 'laplaptech_raw' }}
-      DBT_PROFILES_DIR: lalaptech_pipeline
+      DBT_PROFILES_DIR: ${{ github.workspace }}/LalapTech-Pipeline-Project/lalaptech_pipeline
       RUN_DBT_BUILD: ${{ vars.RUN_DBT_BUILD || 'false' }}
 
     steps:

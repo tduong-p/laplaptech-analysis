@@ -3,23 +3,24 @@
 WITH session_compared_devices AS (
     SELECT
         session_id,
-        min(toDateTime(event_received_on_server_timestamp, 'Asia/Ho_Chi_Minh')) AS first_event_at,
-        max(toDateTime(event_received_on_server_timestamp, 'Asia/Ho_Chi_Minh')) AS last_event_at,
-
-        groupUniqArray(
-            toUInt64OrNull(JSONExtractString(event_data, 'device_id'))
+        MIN(event_at_timestamp) AS first_event_at,
+        MAX(event_at_timestamp) AS last_event_at,
+        ARRAY_AGG(
+            DISTINCT SAFE_CAST(JSON_VALUE(event_data, '$.device_id') AS INT64)
+            IGNORE NULLS
         ) AS compared_device_ids,
-
-        count() AS comparison_events
+        COUNT(*) AS comparison_events
     FROM {{ ref('silver_user_event_tracking') }}
     WHERE event_name IN (
         'add_to_comparison',
         'select_device_for_comparison',
         'comparison_chart_sort_selection'
     )
-      AND JSONExtractString(event_data, 'device_id') != ''
+      AND SAFE_CAST(JSON_VALUE(event_data, '$.device_id') AS INT64) IS NOT NULL
     GROUP BY session_id
-    HAVING length(compared_device_ids) > 1
+    HAVING COUNT(
+        DISTINCT SAFE_CAST(JSON_VALUE(event_data, '$.device_id') AS INT64)
+    ) > 1
 ),
 
 session_device_long AS (
@@ -28,8 +29,9 @@ session_device_long AS (
         first_event_at,
         last_event_at,
         comparison_events,
-        arrayJoin(compared_device_ids) AS device_id
+        device_id
     FROM session_compared_devices
+    CROSS JOIN UNNEST(compared_device_ids) AS device_id
 )
 
 SELECT
@@ -39,4 +41,3 @@ SELECT
     last_event_at,
     comparison_events
 FROM session_device_long
-WHERE device_id IS NOT NULL

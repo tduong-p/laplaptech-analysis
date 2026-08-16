@@ -1,7 +1,7 @@
 {{ config(materialized='table') }}
 
 SELECT
-    toDate(dt.event_at_date) AS event_date,
+    dt.event_at_date AS event_date,
     dt.device_id,
 
     d.name AS device_name,
@@ -24,6 +24,9 @@ SELECT
     d.screen_ppi,
     d.laptop_weight,
     d.charger_weight,
+
+    COUNT(*) AS page_views,
+    COUNT(DISTINCT dt.session_id) AS viewing_sessions
 
 FROM {{ ref('int_device_traffic') }} AS dt
 LEFT JOIN {{ ref('silver_laptop_model') }} AS d
