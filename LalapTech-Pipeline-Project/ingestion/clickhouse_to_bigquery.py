@@ -84,14 +84,14 @@ def get_max_loaded_timestamp(
     bq_client: bigquery.Client,
     destination_table: str,
     timestamp_column: str,
-) -> str | None:
+) -> int | None:
     try:
         query_job = bq_client.query(
-            f"SELECT CAST(MAX({timestamp_column}) AS STRING) AS max_ts "
+            f"SELECT MAX({timestamp_column}) AS max_ts "
             f"FROM `{destination_table}`"
         )
         rows = list(query_job.result())
-        return rows[0]["max_ts"] if rows and rows[0]["max_ts"] else None
+        return int(rows[0]["max_ts"]) if rows and rows[0]["max_ts"] is not None else None
     except Exception as exc:
         print(f"Could not read watermark from {destination_table}: {exc}")
         return None
@@ -122,11 +122,8 @@ def sync_incremental_tables(ch_client, bq_client: bigquery.Client) -> None:
         )
 
         where_clause = ""
-        if max_loaded_timestamp:
-            where_clause = (
-                f"WHERE {timestamp_column} > parseDateTimeBestEffort("
-                f"'{max_loaded_timestamp}')"
-            )
+        if max_loaded_timestamp is not None:
+            where_clause = f"WHERE {timestamp_column} > {max_loaded_timestamp}"
 
         query = f"""
             SELECT *
