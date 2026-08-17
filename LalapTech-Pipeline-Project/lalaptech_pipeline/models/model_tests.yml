@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: int_event_behavior
+    description: One row per valid tracked event with a normalized behavior group.
+    columns:
+      - name: event_id
+        data_tests:
+          - not_null
+      - name: event_at_timestamp
+        data_tests:
+          - not_null
+      - name: behavior_group
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [traffic, discovery, comparison, authentication, other]
+
+  - name: int_session_activity
+    description: One row per non-null session.
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - unique
+      - name: session_date
+        data_tests:
+          - not_null
+
+  - name: int_session_funnel
+    description: One row per DeviceDetail session with ordered funnel timestamps.
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - unique
+      - name: cohort_date
+        data_tests:
+          - not_null
+
+  - name: int_comparison_event
+    description: One row per session and distinct device in qualifying comparison sessions.
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+      - name: device_id
+        data_tests:
+          - not_null
+
+  - name: int_comparison_sort_event
+    description: One row per comparison sort event with exact device IDs and sort settings.
+    columns:
+      - name: event_id
+        data_tests:
+          - not_null
+          - unique
+      - name: sort_field
+        data_tests:
+          - not_null
+      - name: sort_direction
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [asc, desc]
+
+  - name: int_product_data_completeness
+    description: Completeness metrics for each active laptop product.
+    columns:
+      - name: device_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: mart_daily_site_kpis
+    description: Daily website activity and comparison KPIs.
+    columns:
+      - name: event_date
+        data_tests:
+          - not_null
+          - unique
+
+  - name: mart_product_data_quality_priority
+    description: Product update priority based on interest, trend, and data completeness.
+    columns:
+      - name: device_id
+        data_tests:
+          - not_null
+          - unique
+      - name: priority_group
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [update_now, maintain, monitor, low_priority]
