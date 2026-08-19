@@ -1,12 +1,34 @@
 # LaplapTech Analytics Pipeline
 
-An end-to-end analytics engineering project that moves behavioral and product data from ClickHouse to BigQuery, transforms it with dbt, and exposes analytics-ready marts for Power BI or Looker Studio.
+[![ClickHouse to BigQuery](https://github.com/tduong-p/laplaptech-analysis/actions/workflows/sync-clickhouse-to-bigquery.yml/badge.svg)](https://github.com/tduong-p/laplaptech-analysis/actions/workflows/sync-clickhouse-to-bigquery.yml)
+[![Last commit](https://img.shields.io/github/last-commit/tduong-p/laplaptech-analysis)](https://github.com/tduong-p/laplaptech-analysis/commits/main)
+
+> An end-to-end analytics pipeline that moves real-world product and clickstream data from ClickHouse to BigQuery, transforms it with dbt (Bronze -> Silver -> Intermediate -> Gold), and serves analytics-ready marts to Power BI or Looker Studio.
 
 LaplapTech is a technology product comparison website. This project studies how visitors browse, evaluate, and compare laptops, then converts those behaviors into recommendations for technology reviewers, content teams, and marketing agencies.
 
+## TL;DR
+
+- **Data:** Real-world LaplapTech product, benchmark, and clickstream data from ClickHouse.
+- **Pipeline:** Python ingestion -> BigQuery -> dbt Bronze/Silver/Intermediate/Gold -> Power BI or Looker Studio.
+- **Analysis:** Product interest, comparison behavior, sorting criteria, behavioral funnels, and product-data update priorities.
+- **Audience:** Technology reviewers, content teams, and technology-focused marketing agencies.
+- **Current state:** The pipeline and analytical marts are implemented; live validation, metric calibration, and the final BI report are in progress.
+- **Start here:** Read [`context.md`](context.md) for the business questions or explore [`dbt/models/gold`](dbt/models/gold) for reporting-ready models.
+
+## Why I built this
+
+I wanted to practice analytics on data that behaves more like a real system: nested JSON, imperfect timestamps, repeated events, normalized product tables, and business questions that do not arrive with a predefined dashboard.
+
+The goal is not simply to demonstrate that the pipeline runs. I use the project to document how an analyst moves from an ambiguous question, through ad hoc exploration and grain definition, into tested dbt models and a report that can support a decision. Both the useful conclusions and the limitations are part of the portfolio.
+
+## Project status
+
+**Active development.** The ingestion workflow, BigQuery-compatible dbt layers, analytical marts, and documentation are in place. Live warehouse validation, metric calibration, and the final Power BI report are still in progress.
+
 ## Dataset provenance and attribution
 
-The dataset was contributed by **Nguyễn Ngọc Duy Luân**, also known in the Vietnamese data community as **Duy Luân Dễ Thương**. It was shared with the **Xóm Data** community as a practical learning dataset from the LaplapTech website project.
+The dataset was contributed by [**Nguyễn Ngọc Duy Luân (Duy Luân Dễ Thương)**](https://www.facebook.com/duyluannice). It was shared with the [**Xóm Data** community](https://www.facebook.com/groups/xomdata) as a practical learning dataset from the LaplapTech website project.
 
 According to the original community introduction, the data comes from an operational ClickHouse database hosted in the contributor's own data center. It was shared so learners could practice with realistic relational and clickstream data rather than relying only on fully cleaned demonstration datasets such as Superstore or Titanic.
 
@@ -31,27 +53,35 @@ The project therefore focuses on five questions:
 4. Which specifications do users actively sort by during comparison?
 5. Which high-interest products should have their data completed or updated first?
 
+The detailed business context, analytical assumptions, stakeholders, pain points, and ad hoc question backlog are documented in [`context.md`](context.md).
+
 ## Architecture
 
-```text
-ClickHouse
-    |
-    | Python ingestion
-    v
-BigQuery: laplaptech_raw
-    |
-    | dbt Core
-    v
-Bronze views
-    -> Silver views
-        -> Intermediate views
-            -> Gold tables
-                |
-                v
-        Power BI / Looker Studio
+```mermaid
+flowchart LR
+    A[(ClickHouse<br/>Operational Source)] -->|Python ingestion| B[(BigQuery<br/>Raw Dataset)]
+    B -->|dbt| C[Bronze<br/>Source-aligned views]
+    C -->|dbt| D[Silver<br/>Cleaned and typed views]
+    D -->|dbt| E[Intermediate<br/>Reusable business logic]
+    E -->|dbt| F[(Gold<br/>Analytics marts)]
+    G[GitHub Actions<br/>Daily schedule] -. orchestrates .-> A
+    G -. runs dbt .-> C
+    F --> H[Power BI]
+    F --> I[Looker Studio]
 ```
 
 The GitHub Actions workflow runs at `02:00 UTC` every day, approximately `09:00` in Vietnam, and can also be triggered manually.
+
+### Architectural components
+
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Source | ClickHouse | Stores operational product, benchmark, and clickstream data |
+| Ingestion | Python, Pandas, PyArrow | Extracts ClickHouse data and loads it into BigQuery |
+| Cloud warehouse | BigQuery | Stores raw data and dbt-built analytical relations |
+| Transformation | dbt Core | Applies Bronze, Silver, Intermediate, and Gold modeling logic |
+| Orchestration | GitHub Actions | Runs scheduled ingestion and optionally executes `dbt build` |
+| Serving | Power BI / Looker Studio | Presents analysis from stable Gold marts |
 
 ## Technology stack
 
@@ -219,6 +249,7 @@ laplaptech-analysis/
 ├── .github/
 │   └── workflows/
 ├── README.md
+├── context.md
 ├── DEVLOG.md
 ├── requirements.txt
 ├── docs/
@@ -243,6 +274,14 @@ laplaptech-analysis/
 ```
 
 ## Running locally
+
+### Prerequisites
+
+- Python 3.11 or a compatible Python 3 release.
+- A Google Cloud project with BigQuery enabled.
+- A service account with the required BigQuery permissions.
+- Authorized access to the source ClickHouse database.
+- dbt Core with the BigQuery adapter, installed through `requirements.txt`.
 
 ### 1. Create an environment
 
@@ -343,7 +382,29 @@ Important checks still include:
 - Build the Power BI semantic model and report pages.
 - Add report screenshots and final findings to this README.
 
+## Support and contributions
+
+This is primarily a personal learning and portfolio project. Questions, bug reports, and suggestions can be submitted through [GitHub Issues](https://github.com/tduong-p/laplaptech-analysis/issues).
+
+Pull requests are welcome when they preserve the documented model grain, use BigQuery-compatible SQL, avoid committing credentials or raw private data, and include appropriate dbt tests or validation notes.
+
+Project decisions and recent work are recorded in [`DEVLOG.md`](DEVLOG.md). It acts as a transparent development journal: what changed, why it changed, which assumptions remain open, and what I learned along the way.
+
+## License
+
+No software license has been added to this repository yet. Until a license is explicitly provided, the source code should not be assumed to be licensed for reuse or redistribution.
+
+The underlying LaplapTech dataset is separate from this repository. Its use remains subject to the access terms provided by the dataset contributor and the Xóm Data community.
+
 ## Documentation
 
+- [Business and analytical context](context.md)
 - [Development log](DEVLOG.md)
 - [Report storytelling plan](docs/report-storytelling-plan.md)
+
+## Acknowledgements and community
+
+This project grew from a community contribution and is intended to keep that learning spirit alive. If you explore the dataset or find a different interpretation, discussion through an Issue is welcome.
+
+- Dataset contributor: [Nguyễn Ngọc Duy Luân — Duy Luân Dễ Thương](https://www.facebook.com/duyluannice)
+- Community: [Xóm Data](https://www.facebook.com/groups/xomdata)
