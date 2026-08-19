@@ -58,16 +58,41 @@ The detailed business context, analytical assumptions, stakeholders, pain points
 ## Architecture
 
 ```mermaid
-flowchart LR
-    A[(ClickHouse<br/>Operational Source)] -->|Python ingestion| B[(BigQuery<br/>Raw Dataset)]
-    B -->|dbt| C[Bronze<br/>Source-aligned views]
-    C -->|dbt| D[Silver<br/>Cleaned and typed views]
-    D -->|dbt| E[Intermediate<br/>Reusable business logic]
-    E -->|dbt| F[(Gold<br/>Analytics marts)]
-    G[GitHub Actions<br/>Daily schedule] -. orchestrates .-> A
-    G -. runs dbt .-> C
-    F --> H[Power BI]
-    F --> I[Looker Studio]
+flowchart TB
+    subgraph SOURCE["1. Source"]
+        CH[("ClickHouse<br/>Product, benchmark,<br/>and clickstream data")]
+    end
+
+    subgraph INGESTION["2. Ingestion"]
+        PY["Python<br/>Pandas + PyArrow + clickhouse-connect"]
+    end
+
+    subgraph WAREHOUSE["3. BigQuery warehouse"]
+        RAW[("Raw dataset<br/>Source-aligned tables")]
+        BRONZE["Bronze<br/>Minimal transformations"]
+        SILVER["Silver<br/>Cleaned, typed, and parsed"]
+        INT["Intermediate<br/>Reusable analytical logic"]
+        GOLD[("Gold<br/>Reporting-ready marts")]
+
+        RAW -->|dbt| BRONZE
+        BRONZE -->|dbt| SILVER
+        SILVER -->|dbt| INT
+        INT -->|dbt| GOLD
+    end
+
+    subgraph SERVING["4. Analytics serving"]
+        PBI["Power BI"]
+        LOOKER["Looker Studio"]
+    end
+
+    ACTIONS["GitHub Actions<br/>Manual or daily at 09:00 ICT"]
+
+    CH -->|Extract| PY
+    PY -->|Load| RAW
+    GOLD --> PBI
+    GOLD --> LOOKER
+    ACTIONS -. orchestrates ingestion .-> PY
+    ACTIONS -. optionally runs dbt build .-> BRONZE
 ```
 
 The GitHub Actions workflow runs at `02:00 UTC` every day, approximately `09:00` in Vietnam, and can also be triggered manually.
