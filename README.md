@@ -1,0 +1,349 @@
+# LaplapTech Analytics Pipeline
+
+An end-to-end analytics engineering project that moves behavioral and product data from ClickHouse to BigQuery, transforms it with dbt, and exposes analytics-ready marts for Power BI or Looker Studio.
+
+LaplapTech is a technology product comparison website. This project studies how visitors browse, evaluate, and compare laptops, then converts those behaviors into recommendations for technology reviewers, content teams, and marketing agencies.
+
+## Dataset provenance and attribution
+
+The dataset was contributed by **Nguyễn Ngọc Duy Luân**, also known in the Vietnamese data community as **Duy Luân Dễ Thương**. It was shared with the **Xóm Data** community as a practical learning dataset from the LaplapTech website project.
+
+According to the original community introduction, the data comes from an operational ClickHouse database hosted in the contributor's own data center. It was shared so learners could practice with realistic relational and clickstream data rather than relying only on fully cleaned demonstration datasets such as Superstore or Titanic.
+
+Many thanks to Nguyễn Ngọc Duy Luân for making this learning opportunity available to the community.
+
+### Usage note
+
+- This repository does not redistribute the raw database, connection credentials, or personal secrets.
+- The data is used here for educational analytics and portfolio development.
+- No formal data license was included in the source description available to this project. Anyone reusing or redistributing the raw data should follow the contributor's and community's original access terms.
+- This is an independent learning project and should not be interpreted as an official LaplapTech report.
+
+## Project context
+
+The product catalog contains fewer than 200 devices, so it is not broad enough to represent the entire electronics market or support manufacturer-level production decisions. The event stream, however, contains rich behavioral signals.
+
+The project therefore focuses on five questions:
+
+1. Is the event-tracking data reliable enough for behavioral analysis?
+2. Which products attract the most page-level interest?
+3. Which products and product segments require deeper comparison?
+4. Which specifications do users actively sort by during comparison?
+5. Which high-interest products should have their data completed or updated first?
+
+## Architecture
+
+```text
+ClickHouse
+    |
+    | Python ingestion
+    v
+BigQuery: laplaptech_raw
+    |
+    | dbt Core
+    v
+Bronze views
+    -> Silver views
+        -> Intermediate views
+            -> Gold tables
+                |
+                v
+        Power BI / Looker Studio
+```
+
+The GitHub Actions workflow runs at `02:00 UTC` every day, approximately `09:00` in Vietnam, and can also be triggered manually.
+
+## Technology stack
+
+- **Source database:** ClickHouse
+- **Cloud warehouse:** Google BigQuery
+- **Ingestion:** Python, Pandas, PyArrow, `clickhouse-connect`
+- **Transformation:** dbt Core and dbt BigQuery
+- **Orchestration:** GitHub Actions
+- **Visualization:** Power BI or Looker Studio
+- **Version control:** Git and GitHub
+
+## Source data model
+
+The ingestion job synchronizes six source tables:
+
+```text
+brand
+cpu_model
+gpu_model
+laptop_benchmark_result
+laptop_model
+user_event_tracking
+```
+
+Product and reference tables use full refresh. `user_event_tracking` currently uses a timestamp watermark and append-based incremental loading.
+
+### `user_event_tracking` - clickstream data
+
+The largest and most behaviorally rich table records actions such as page views, searches, clicks, comparison events, and chart sorting. The `event_data` and `device` columns contain JSON payloads, creating realistic parsing, validation, and schema-evolution challenges.
+
+Examples of extracted attributes include:
+
+```text
+device_id
+page_name
+search keyword
+operating system
+comparison device IDs
+comparison sort criterion
+sort direction
+```
+
+### `laptop_model` - product master data
+
+This table describes each laptop and connects it to brand, CPU, and GPU entities. Available attributes include battery capacity, laptop and charger weight, screen size and dimensions, screen PPI, TDP values, product-segment flags, and product-image metadata.
+
+### `laptop_benchmark_result` - measured performance data
+
+This table contains practical test results collected for laptop models and joins back through `laptop_model_id`. Depending on the record, fields include office and gaming battery duration, plugged-in and battery Geekbench 6 results, notes, and review-video information.
+
+This creates an analytical bridge between:
+
+```text
+observed user interest
+<-> product specifications
+<-> measured performance
+```
+
+### `brand`, `cpu_model`, and `gpu_model` - normalized dimensions
+
+These tables separate descriptive entities from the laptop master table. They provide realistic practice for multi-table joins and can support a star-like analytical model in the warehouse or BI semantic layer.
+
+## Why the dataset is useful for practice
+
+The source combines several tasks commonly encountered in analytics work:
+
+- Parsing semi-structured JSON clickstream payloads.
+- Validating event timestamps and session identifiers.
+- Joining normalized product dimensions.
+- Connecting behavioral data with product specifications and benchmarks.
+- Defining grain before calculating metrics.
+- Separating reusable warehouse logic from BI calculations.
+- Migrating transformations from ClickHouse SQL to BigQuery SQL.
+- Building scheduled ingestion, dbt models, tests, and reporting marts.
+
+The original community challenge suggested three learning levels:
+
+1. Extract product IDs and search keywords from event JSON.
+2. Join laptop, brand, CPU, and GPU tables into a readable product catalog.
+3. Combine user behavior with benchmark results to investigate whether laptops with strong real-world battery performance receive different levels of views or comparison interest than gaming-oriented, high-benchmark machines.
+
+This repository extends those exercises into a repeatable cloud analytics pipeline.
+
+## dbt model layers
+
+### Bronze
+
+Six views preserve the BigQuery raw tables with minimal transformation.
+
+### Silver
+
+Six views standardize product entities, Boolean fields, timestamps, and event attributes. Server-received time is used as the canonical analytics timestamp because client-local timestamps were found to contain large anomalies.
+
+### Intermediate
+
+| Model | Grain | Purpose |
+|---|---|---|
+| `int_event_behavior` | One row per event | Maps events into traffic, discovery, comparison, authentication, or other behavior |
+| `int_session_activity` | One row per session | Summarizes session activity and behavioral flags |
+| `int_session_funnel` | One row per DeviceDetail session | Identifies ordered funnel steps |
+| `int_device_traffic` | One row per valid DeviceDetail event | Extracts product-detail traffic |
+| `int_comparison_event` | One row per session and device | Deduplicates devices involved in a comparison session |
+| `int_comparison_segment_pair` | One row per session and segment pair | Creates unordered segment pairs within sessions |
+| `int_comparison_sort_event` | One row per sort event | Extracts `device_ids`, `sort_by`, and `sort_direction` |
+| `int_comparison_sort_segment_pair` | One row per sort event and segment pair | Connects sorting behavior to the exact products in the event payload |
+| `int_product_interest_daily` | One row per date and product | Combines product views and comparison interest |
+| `int_product_interest_trend` | One row per week and product | Measures week-over-week interest changes |
+| `int_product_data_completeness` | One row per product | Scores missing product specifications and content fields |
+
+### Gold
+
+| Model | Grain | Analytics use |
+|---|---|---|
+| `mart_daily_site_kpis` | One row per date | Website traffic, user, session, discovery, and comparison KPIs |
+| `mart_behavior_funnel_daily` | One row per date and funnel step | Funnel conversion and drop-off |
+| `mart_device_traffic` | One row per date and product | Product-detail views and viewing sessions |
+| `mart_compared_devices_daily` | One row per date and product | Daily comparison interest |
+| `mart_most_compared_devices` | One row per product | All-time product comparison ranking |
+| `mart_product_interest` | One row per week and product | View/comparison interest score and segment |
+| `mart_comparison_segment_pairs` | One row per segment pair | Product segments commonly considered in the same session |
+| `mart_comparison_sort_criteria` | One row per segment pair, criterion, and direction | Specifications actively used to sort comparison tables |
+| `mart_product_data_quality_priority` | One row per active product | Product-data update priority |
+| `mart_user_os` | One row per session and OS | Operating-system distribution for sessions |
+
+## Core analytical definitions
+
+### General product interest
+
+A valid event whose JSON payload has `page_name = 'DeviceDetail'` and a valid `device_id`.
+
+### Comparison interest
+
+A product appearing in comparison-related events within a session. Duplicate product IDs inside the same session are counted once.
+
+### Exact comparison sorting context
+
+The `comparison_chart_sort_selection` payload contains:
+
+```json
+{
+  "device_ids": ["27", "44", "24"],
+  "sort_by": "office_battery_life",
+  "sort_direction": "asc"
+}
+```
+
+This payload makes it possible to associate a sorting criterion with the exact products present in that comparison, rather than inferring them from every event in the session.
+
+### Product-data update priority
+
+The first scoring version combines:
+
+```text
+product interest
++ recent interest trend
++ missing critical specifications
+```
+
+This is an analytical heuristic and should be recalibrated after inspecting real distributions and receiving stakeholder feedback.
+
+## Repository structure
+
+```text
+laplaptech-analysis/
+├── .github/
+│   └── workflows/
+├── README.md
+├── DEVLOG.md
+├── requirements.txt
+├── docs/
+│   └── report-storytelling-plan.md
+├── ingestion/
+│   └── clickhouse_to_bigquery.py
+└── dbt/
+    ├── dbt_project.yml
+    ├── profiles.yml
+    ├── models/
+    │   ├── sources.yml
+    │   ├── model_tests.yml
+    │   ├── bronze/
+    │   ├── silver/
+    │   ├── intermediate/
+    │   └── gold/
+    ├── analyses/
+    ├── macros/
+    ├── seeds/
+    ├── snapshots/
+    └── tests/
+```
+
+## Running locally
+
+### 1. Create an environment
+
+```bash
+git clone https://github.com/tduong-p/laplaptech-analysis.git
+cd laplaptech-analysis
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Configure environment variables
+
+The dbt profile expects:
+
+```text
+GCP_PROJECT_ID
+GCP_SERVICE_ACCOUNT_JSON
+BIGQUERY_LOCATION
+BIGQUERY_DBT_DATASET
+LAPLAPTECH_SOURCE_DATABASE
+LAPLAPTECH_SOURCE_SCHEMA
+```
+
+Do not commit service-account keys or database credentials.
+
+### 3. Validate and build
+
+```bash
+cd dbt
+dbt debug
+dbt build
+```
+
+## GitHub Actions deployment
+
+Configure these repository secrets:
+
+```text
+CLICKHOUSE_HOST
+CLICKHOUSE_PORT
+CLICKHOUSE_USER
+CLICKHOUSE_PASSWORD
+CLICKHOUSE_DATABASE
+CLICKHOUSE_SECURE
+GCP_PROJECT_ID
+GCP_SERVICE_ACCOUNT_JSON
+```
+
+Optional repository variables:
+
+```text
+BIGQUERY_LOCATION=asia-southeast1
+BIGQUERY_RAW_DATASET=laplaptech_raw
+BIGQUERY_DBT_DATASET=laplaptech_dev
+RUN_DBT_BUILD=true
+```
+
+The workflow:
+
+1. Installs Python and project dependencies.
+2. Synchronizes ClickHouse tables to BigQuery.
+3. Runs `dbt debug` and `dbt build` when `RUN_DBT_BUILD=true`.
+
+## BI usage
+
+Power BI and Looker Studio should read gold marts rather than raw, bronze, or intermediate models.
+
+For Power BI, Import mode is appropriate for the current project size. BigQuery and dbt define reusable grain and business logic; Power BI should handle relationships, filter-context measures, and visualization.
+
+## Data quality and tests
+
+The dbt project includes tests for important keys, accepted behavior groups, funnel sessions, date grain, product completeness, and priority categories.
+
+Important checks still include:
+
+- Duplicate events and duplicate event IDs
+- Null or multi-user `session_id` values
+- Missing dates or abnormal event-volume spikes
+- Correct JSON keys for newly observed event types
+- Late-arriving events in the incremental ingestion process
+
+## Known limitations
+
+- The product catalog is small and not representative of the entire market.
+- Session-based product pairs do not always prove that products appeared in the same comparison table. Sort-event payloads are more reliable because they contain exact `device_ids`.
+- The append-based event ingestion is safe for sequential runs but is not fully idempotent under concurrent execution.
+- Late-arriving events older than the current timestamp watermark can be missed.
+- Interest and priority scores are analytical heuristics rather than validated business rules.
+- A true content-opportunity model requires a content inventory containing published topics, dates, formats, and coverage.
+
+## Next steps
+
+- Replace append-only event ingestion with staging and `MERGE ON id`.
+- Add workflow concurrency protection.
+- Validate all dbt models against the live BigQuery schema.
+- Review score distributions and recalibrate weighting rules.
+- Build the Power BI semantic model and report pages.
+- Add report screenshots and final findings to this README.
+
+## Documentation
+
+- [Development log](DEVLOG.md)
+- [Report storytelling plan](docs/report-storytelling-plan.md)

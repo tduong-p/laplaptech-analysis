@@ -39,5 +39,3 @@ models:
       +materialized: view
     gold:
       +materialized: table
-    example:
-      +enabled: false
