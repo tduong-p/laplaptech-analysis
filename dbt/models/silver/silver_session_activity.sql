@@ -12,16 +12,15 @@ SELECT
     MAX(event_at_timestamp) AS session_ended_at,
     DATE(MIN(event_at_timestamp), 'Asia/Ho_Chi_Minh') AS session_date,
     COUNT(*) AS event_count,
-    COUNTIF(JSON_VALUE(event_data, '$.page_name') = 'DeviceDetail') AS product_view_count,
+    COUNTIF(page_name = 'DeviceDetail') AS product_view_count,
     COUNT(DISTINCT IF(
-        JSON_VALUE(event_data, '$.page_name') = 'DeviceDetail',
+        page_name = 'DeviceDetail',
         device_id,
         NULL
     )) AS distinct_products_viewed,
     COUNTIF(behavior_group = 'discovery') > 0 AS has_discovery,
     COUNTIF(behavior_group = 'comparison') > 0 AS has_comparison,
     COUNTIF(behavior_group = 'authentication') > 0 AS has_login
-FROM {{ ref('int_event_behavior') }}
+FROM {{ ref('silver_user_event_tracking') }}
 WHERE session_id IS NOT NULL
 GROUP BY session_id
-

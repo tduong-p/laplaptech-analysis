@@ -8,7 +8,7 @@ SELECT
 
     COUNT(DISTINCT scd.session_id) AS compared_sessions
 
-FROM {{ ref('int_comparison_event') }} AS scd
+FROM {{ ref('silver_comparison_session_device') }} AS scd
 LEFT JOIN {{ ref('silver_laptop_model') }} AS d
     ON scd.device_id = d.id
 LEFT JOIN {{ ref('silver_brand') }} AS b

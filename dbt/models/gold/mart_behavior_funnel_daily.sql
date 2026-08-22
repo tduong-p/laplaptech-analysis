@@ -4,12 +4,12 @@
 WITH daily_counts AS (
     SELECT
         cohort_date,
-        COUNTIF(reached_device_view) AS step_1_sessions,
-        COUNTIF(reached_discovery) AS step_2_sessions,
-        COUNTIF(reached_add_to_comparison) AS step_3_sessions,
-        COUNTIF(reached_select_for_comparison) AS step_4_sessions,
-        COUNTIF(reached_comparison_sort) AS step_5_sessions
-    FROM {{ ref('int_session_funnel') }}
+        COUNTIF(reached_device_view)            AS step_1_sessions,
+        COUNTIF(reached_discovery)              AS step_2_sessions,
+        COUNTIF(reached_add_to_comparison)      AS step_3_sessions,
+        COUNTIF(reached_select_for_comparison)  AS step_4_sessions,
+        COUNTIF(reached_comparison_sort)        AS step_5_sessions
+    FROM {{ ref('silver_session_funnel') }}
     GROUP BY cohort_date
 ),
 

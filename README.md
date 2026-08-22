@@ -3,14 +3,14 @@
 [![ClickHouse to BigQuery](https://github.com/tduong-p/laplaptech-analysis/actions/workflows/sync-clickhouse-to-bigquery.yml/badge.svg)](https://github.com/tduong-p/laplaptech-analysis/actions/workflows/sync-clickhouse-to-bigquery.yml)
 [![Last commit](https://img.shields.io/github/last-commit/tduong-p/laplaptech-analysis)](https://github.com/tduong-p/laplaptech-analysis/commits/main)
 
-> An end-to-end analytics pipeline that moves real-world product and clickstream data from ClickHouse to BigQuery, transforms it with dbt (Bronze -> Silver -> Intermediate -> Gold), and serves analytics-ready marts to Power BI or Looker Studio.
+> An end-to-end analytics pipeline that moves real-world product and clickstream data from ClickHouse to BigQuery, transforms it with dbt (Bronze -> Silver -> Gold), and serves analytics-ready marts to Power BI or Looker Studio.
 
 LaplapTech is a technology product comparison website. This project studies how visitors browse, evaluate, and compare laptops, then converts those behaviors into recommendations for technology reviewers, content teams, and marketing agencies.
 
 ## TL;DR
 
 - **Data:** Real-world LaplapTech product, benchmark, and clickstream data from ClickHouse.
-- **Pipeline:** Python ingestion -> BigQuery -> dbt Bronze/Silver/Intermediate/Gold -> Power BI or Looker Studio.
+- **Pipeline:** Python ingestion -> BigQuery -> dbt Bronze/Silver/Gold -> Power BI or Looker Studio.
 - **Analysis:** Product interest, comparison behavior, sorting criteria, behavioral funnels, and product-data update priorities.
 - **Audience:** Technology reviewers, content teams, and technology-focused marketing agencies.
 - **Current state:** The pipeline and analytical marts are implemented; live validation, metric calibration, and the final BI report are in progress.
@@ -57,43 +57,7 @@ The detailed business context, analytical assumptions, stakeholders, pain points
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph SOURCE["1. Source"]
-        CH[("ClickHouse<br/>Product, benchmark,<br/>and clickstream data")]
-    end
-
-    subgraph INGESTION["2. Ingestion"]
-        PY["Python<br/>Pandas + PyArrow + clickhouse-connect"]
-    end
-
-    subgraph WAREHOUSE["3. BigQuery warehouse"]
-        RAW[("Raw dataset<br/>Source-aligned tables")]
-        BRONZE["Bronze<br/>Minimal transformations"]
-        SILVER["Silver<br/>Cleaned, typed, and parsed"]
-        INT["Intermediate<br/>Reusable analytical logic"]
-        GOLD[("Gold<br/>Reporting-ready marts")]
-
-        RAW -->|dbt| BRONZE
-        BRONZE -->|dbt| SILVER
-        SILVER -->|dbt| INT
-        INT -->|dbt| GOLD
-    end
-
-    subgraph SERVING["4. Analytics serving"]
-        PBI["Power BI"]
-        LOOKER["Looker Studio"]
-    end
-
-    ACTIONS["GitHub Actions<br/>Manual or daily at 09:00 ICT"]
-
-    CH -->|Extract| PY
-    PY -->|Load| RAW
-    GOLD --> PBI
-    GOLD --> LOOKER
-    ACTIONS -. orchestrates ingestion .-> PY
-    ACTIONS -. optionally runs dbt build .-> BRONZE
-```
+![LaplapTech analytics pipeline architecture](docs/assets/laplaptech-architecture.svg)
 
 The GitHub Actions workflow runs at `02:00 UTC` every day, approximately `09:00` in Vietnam, and can also be triggered manually.
 
@@ -104,7 +68,7 @@ The GitHub Actions workflow runs at `02:00 UTC` every day, approximately `09:00`
 | Source | ClickHouse | Stores operational product, benchmark, and clickstream data |
 | Ingestion | Python, Pandas, PyArrow | Extracts ClickHouse data and loads it into BigQuery |
 | Cloud warehouse | BigQuery | Stores raw data and dbt-built analytical relations |
-| Transformation | dbt Core | Applies Bronze, Silver, Intermediate, and Gold modeling logic |
+| Transformation | dbt Core | Applies Bronze, Silver, and Gold modeling logic |
 | Orchestration | GitHub Actions | Runs scheduled ingestion and optionally executes `dbt build` |
 | Serving | Power BI / Looker Studio | Presents analysis from stable Gold marts |
 
@@ -198,23 +162,19 @@ Six views preserve the BigQuery raw tables with minimal transformation.
 
 ### Silver
 
-Six views standardize product entities, Boolean fields, timestamps, and event attributes. Server-received time is used as the canonical analytics timestamp because client-local timestamps were found to contain large anomalies.
-
-### Intermediate
+Eleven views standardize product entities, Boolean fields, timestamps, event attributes, and conformed behavioral facts. Server-received time is used as the canonical analytics timestamp because client-local timestamps were found to contain large anomalies.
 
 | Model | Grain | Purpose |
 |---|---|---|
-| `int_event_behavior` | One row per event | Maps events into traffic, discovery, comparison, authentication, or other behavior |
-| `int_session_activity` | One row per session | Summarizes session activity and behavioral flags |
-| `int_session_funnel` | One row per DeviceDetail session | Identifies ordered funnel steps |
-| `int_device_traffic` | One row per valid DeviceDetail event | Extracts product-detail traffic |
-| `int_comparison_event` | One row per session and device | Deduplicates devices involved in a comparison session |
-| `int_comparison_segment_pair` | One row per session and segment pair | Creates unordered segment pairs within sessions |
-| `int_comparison_sort_event` | One row per sort event | Extracts `device_ids`, `sort_by`, and `sort_direction` |
-| `int_comparison_sort_segment_pair` | One row per sort event and segment pair | Connects sorting behavior to the exact products in the event payload |
-| `int_product_interest_daily` | One row per date and product | Combines product views and comparison interest |
-| `int_product_interest_trend` | One row per week and product | Measures week-over-week interest changes |
-| `int_product_data_completeness` | One row per product | Scores missing product specifications and content fields |
+| `silver_user_event_tracking` | One row per event | Standardized timestamps plus parsed `page_name`, `device_id`, and `behavior_group` |
+| `silver_device_traffic_event` | One row per valid DeviceDetail event | Product-detail traffic events |
+| `silver_session_activity` | One row per session | Session activity and behavioral flags |
+| `silver_session_funnel` | One row per DeviceDetail session | Ordered funnel step timestamps |
+| `silver_comparison_session_device` | One row per session and device | Distinct devices involved in comparison sessions |
+| `silver_comparison_sort_event` | One row per sort event | Exact `device_ids`, `sort_by`, and `sort_direction` |
+| Plus five dimension and benchmark views | Source entity | Brand, CPU, GPU, laptop master, and benchmark results |
+
+Logic that is used by only one reporting mart is inlined directly into that mart as a CTE, so the project keeps a clean Bronze -> Silver -> Gold structure without a separate intermediate layer.
 
 ### Gold
 
@@ -224,7 +184,7 @@ Six views standardize product entities, Boolean fields, timestamps, and event at
 | `mart_behavior_funnel_daily` | One row per date and funnel step | Funnel conversion and drop-off |
 | `mart_device_traffic` | One row per date and product | Product-detail views and viewing sessions |
 | `mart_compared_devices_daily` | One row per date and product | Daily comparison interest |
-| `mart_most_compared_devices` | One row per product | All-time product comparison ranking |
+| `mart_most_compared_devices` | One row per product | All-time comparison ranking derived from the daily mart |
 | `mart_product_interest` | One row per week and product | View/comparison interest score and segment |
 | `mart_comparison_segment_pairs` | One row per segment pair | Product segments commonly considered in the same session |
 | `mart_comparison_sort_criteria` | One row per segment pair, criterion, and direction | Specifications actively used to sort comparison tables |
@@ -278,6 +238,8 @@ laplaptech-analysis/
 ├── DEVLOG.md
 ├── requirements.txt
 ├── docs/
+│   ├── assets/
+│   │   └── laplaptech-architecture.svg
 │   └── report-storytelling-plan.md
 ├── ingestion/
 │   └── clickhouse_to_bigquery.py
@@ -289,7 +251,6 @@ laplaptech-analysis/
     │   ├── model_tests.yml
     │   ├── bronze/
     │   ├── silver/
-    │   ├── intermediate/
     │   └── gold/
     ├── analyses/
     ├── macros/
@@ -373,7 +334,7 @@ The workflow:
 
 ## BI usage
 
-Power BI and Looker Studio should read gold marts rather than raw, bronze, or intermediate models.
+Power BI and Looker Studio should read gold marts rather than raw or bronze models.
 
 For Power BI, Import mode is appropriate for the current project size. BigQuery and dbt define reusable grain and business logic; Power BI should handle relationships, filter-context measures, and visualization.
 

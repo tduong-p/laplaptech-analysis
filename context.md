@@ -74,14 +74,14 @@ Behavior and product data can indicate topics that deserve attention, but a defe
 
 ## 6. Analyst responsibility
 
-The analyst is responsible for turning open-ended stakeholder concerns into testable ad hoc questions, validating the source data, defining metric grain, and promoting stable logic into reusable Intermediate and Gold models.
+The analyst is responsible for turning open-ended stakeholder concerns into testable ad hoc questions, validating the source data, defining metric grain, and promoting stable logic into reusable Silver and Gold models.
 
 The recommended workflow is:
 
 1. Explore the source with ad hoc queries.
 2. Validate assumptions, keys, timestamps, and JSON structures.
 3. Define the grain and business meaning of each metric.
-4. Move reusable transformations into Intermediate dbt models.
+4. Move reusable transformations into Silver dbt models and keep one-off logic inside Gold marts.
 5. Expose reporting-ready metrics through Gold marts.
 6. Visualize Gold models in Power BI or Looker Studio.
 7. Document limitations so exploratory associations are not presented as causal findings.

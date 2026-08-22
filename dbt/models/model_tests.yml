@@ -1,10 +1,10 @@
 version: 2
 
 models:
-  - name: int_event_behavior
-    description: One row per valid tracked event with a normalized behavior group.
+  - name: silver_user_event_tracking
+    description: One row per valid tracked event with normalized timestamps, parsed device and page fields, and behavior group.
     columns:
-      - name: event_id
+      - name: id
         data_tests:
           - not_null
       - name: event_at_timestamp
@@ -17,7 +17,7 @@ models:
               arguments:
                 values: [traffic, discovery, comparison, authentication, other]
 
-  - name: int_session_activity
+  - name: silver_session_activity
     description: One row per non-null session.
     columns:
       - name: session_id
@@ -28,7 +28,7 @@ models:
         data_tests:
           - not_null
 
-  - name: int_session_funnel
+  - name: silver_session_funnel
     description: One row per DeviceDetail session with ordered funnel timestamps.
     columns:
       - name: session_id
@@ -39,7 +39,7 @@ models:
         data_tests:
           - not_null
 
-  - name: int_comparison_event
+  - name: silver_comparison_session_device
     description: One row per session and distinct device in qualifying comparison sessions.
     columns:
       - name: session_id
@@ -49,7 +49,7 @@ models:
         data_tests:
           - not_null
 
-  - name: int_comparison_sort_event
+  - name: silver_comparison_sort_event
     description: One row per comparison sort event with exact device IDs and sort settings.
     columns:
       - name: event_id
@@ -65,14 +65,6 @@ models:
           - accepted_values:
               arguments:
                 values: [asc, desc]
-
-  - name: int_product_data_completeness
-    description: Completeness metrics for each active laptop product.
-    columns:
-      - name: device_id
-        data_tests:
-          - not_null
-          - unique
 
   - name: mart_daily_site_kpis
     description: Daily website activity and comparison KPIs.

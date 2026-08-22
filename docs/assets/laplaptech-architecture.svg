@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960" role="img" aria-labelledby="title desc">
+  <title id="title">LaplapTech Analytics Pipeline Architecture</title>
+  <desc id="desc">ClickHouse data is ingested by Python into BigQuery, transformed with dbt from Bronze through Gold, orchestrated by GitHub Actions, and served to Power BI and Looker Studio.</desc>
+  <defs>
+    <pattern id="smallGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#2b4650" stroke-width="1" opacity="0.65"/>
+    </pattern>
+    <pattern id="grid" width="120" height="120" patternUnits="userSpaceOnUse">
+      <rect width="120" height="120" fill="url(#smallGrid)"/>
+      <path d="M 120 0 L 0 0 0 120" fill="none" stroke="#3b5963" stroke-width="1.4" opacity="0.55"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L11,6 L1,11" fill="none" stroke="#e9f2f3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .title { font: 700 43px "Comic Sans MS", "Bradley Hand", cursive; fill: #f6faf8; letter-spacing: 1px; }
+      .subtitle { font: 20px "Comic Sans MS", "Bradley Hand", cursive; fill: #adc5c9; }
+      .section { font: 700 25px "Comic Sans MS", "Bradley Hand", cursive; fill: #f6faf8; }
+      .node-title { font: 700 22px "Comic Sans MS", "Bradley Hand", cursive; fill: #f6faf8; }
+      .node-text { font: 17px "Comic Sans MS", "Bradley Hand", cursive; fill: #d4e1e3; }
+      .tiny { font: 14px "Comic Sans MS", "Bradley Hand", cursive; fill: #aac1c5; }
+      .panel { fill: #17282f; fill-opacity: .88; stroke: #e7f0f1; stroke-width: 2.4; }
+      .node { fill: #20343c; stroke: #d9e7e9; stroke-width: 2; }
+      .flow { fill: none; stroke: #e9f2f3; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .dash { fill: none; stroke: #93adb2; stroke-width: 2; stroke-dasharray: 9 8; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1440" height="960" fill="#101f25"/>
+  <rect width="1440" height="960" fill="url(#grid)"/>
+
+  <text x="720" y="70" text-anchor="middle" class="title">LaplapTech Analytics Pipeline</text>
+  <text x="720" y="105" text-anchor="middle" class="subtitle">From real-world clickstream events to reporting-ready product insights</text>
+
+  <!-- 1. Source -->
+  <g filter="url(#shadow)">
+    <rect x="45" y="160" width="230" height="330" rx="24" class="panel"/>
+    <text x="70" y="202" class="section">1. Data Source</text>
+    <ellipse cx="160" cy="265" rx="60" ry="20" fill="#263e47" stroke="#f0cd5a" stroke-width="3"/>
+    <path d="M100 265 v70 c0 12 27 21 60 21s60-9 60-21v-70" fill="#263e47" stroke="#f0cd5a" stroke-width="3"/>
+    <path d="M100 300 c0 12 27 21 60 21s60-9 60-21" fill="none" stroke="#f0cd5a" stroke-width="2"/>
+    <text x="160" y="400" text-anchor="middle" class="node-title">ClickHouse</text>
+    <text x="160" y="430" text-anchor="middle" class="node-text">Operational database</text>
+    <text x="160" y="458" text-anchor="middle" class="tiny">Products • Benchmarks</text>
+    <text x="160" y="478" text-anchor="middle" class="tiny">Clickstream JSON</text>
+  </g>
+
+  <!-- 2. Ingestion -->
+  <g filter="url(#shadow)">
+    <rect x="330" y="160" width="230" height="330" rx="24" class="panel"/>
+    <text x="355" y="202" class="section">2. Ingestion</text>
+    <rect x="380" y="242" width="130" height="98" rx="18" fill="#223943" stroke="#78b9e8" stroke-width="3"/>
+    <path d="M412 278 c0-18 15-28 36-28 h29 v28 h-39 c-8 0-13 4-13 10s5 10 13 10h18" fill="none" stroke="#78b9e8" stroke-width="8" stroke-linecap="round"/>
+    <path d="M478 303 c0 18-15 28-36 28h-29v-28h39c8 0 13-4 13-10s-5-10-13-10h-18" fill="none" stroke="#f0cf61" stroke-width="8" stroke-linecap="round"/>
+    <text x="445" y="385" text-anchor="middle" class="node-title">Python loader</text>
+    <text x="445" y="415" text-anchor="middle" class="node-text">Pandas + PyArrow</text>
+    <text x="445" y="444" text-anchor="middle" class="tiny">Full refresh: dimensions</text>
+    <text x="445" y="466" text-anchor="middle" class="tiny">Incremental: events</text>
+  </g>
+
+  <!-- 3. BigQuery -->
+  <g filter="url(#shadow)">
+    <rect x="615" y="160" width="250" height="330" rx="24" class="panel"/>
+    <text x="640" y="202" class="section">3. Warehouse</text>
+    <circle cx="740" cy="278" r="64" fill="#213841" stroke="#75a7ff" stroke-width="3"/>
+    <circle cx="720" cy="285" r="26" fill="none" stroke="#75a7ff" stroke-width="9"/>
+    <path d="M739 266 l35-22 M739 303 l38 22" stroke="#75a7ff" stroke-width="9" stroke-linecap="round"/>
+    <text x="740" y="385" text-anchor="middle" class="node-title">Google BigQuery</text>
+    <rect x="655" y="410" width="170" height="48" rx="12" class="node"/>
+    <text x="740" y="441" text-anchor="middle" class="node-text">laplaptech_raw</text>
+  </g>
+
+  <!-- 5. Serving -->
+  <g filter="url(#shadow)">
+    <rect x="1180" y="160" width="215" height="690" rx="24" class="panel"/>
+    <text x="1205" y="202" class="section">5. Analytics</text>
+    <rect x="1212" y="240" width="150" height="210" rx="18" class="node"/>
+    <rect x="1235" y="270" width="104" height="74" rx="6" fill="#16272e" stroke="#f2ce56" stroke-width="2"/>
+    <rect x="1248" y="313" width="15" height="21" fill="#f2ce56"/>
+    <rect x="1272" y="295" width="15" height="39" fill="#f2ce56"/>
+    <rect x="1296" y="281" width="15" height="53" fill="#f2ce56"/>
+    <text x="1287" y="382" text-anchor="middle" class="node-title">Power BI</text>
+    <text x="1287" y="414" text-anchor="middle" class="tiny">Portfolio report</text>
+
+    <rect x="1212" y="480" width="150" height="210" rx="18" class="node"/>
+    <rect x="1235" y="510" width="104" height="74" rx="6" fill="#16272e" stroke="#82c995" stroke-width="2"/>
+    <path d="M1248 566 l22-23 17 11 34-31" fill="none" stroke="#82c995" stroke-width="4"/>
+    <circle cx="1248" cy="566" r="4" fill="#82c995"/><circle cx="1270" cy="543" r="4" fill="#82c995"/><circle cx="1287" cy="554" r="4" fill="#82c995"/><circle cx="1321" cy="523" r="4" fill="#82c995"/>
+    <text x="1287" y="622" text-anchor="middle" class="node-title">Looker Studio</text>
+    <text x="1287" y="654" text-anchor="middle" class="tiny">Shareable dashboard</text>
+
+    <rect x="1212" y="720" width="150" height="82" rx="18" fill="#1d343c" stroke="#e9f2f3" stroke-width="2"/>
+    <text x="1287" y="753" text-anchor="middle" class="node-text">Business insights</text>
+    <text x="1287" y="780" text-anchor="middle" class="tiny">Interest • Comparison</text>
+  </g>
+
+  <!-- 4. dbt -->
+  <g filter="url(#shadow)">
+    <rect x="330" y="555" width="770" height="295" rx="24" class="panel"/>
+    <text x="355" y="598" class="section">4. dbt Medallion &amp; Analytics Layer</text>
+
+    <rect x="370" y="640" width="155" height="125" rx="20" class="node"/>
+    <text x="447" y="680" text-anchor="middle" class="node-title">Bronze</text>
+    <text x="447" y="711" text-anchor="middle" class="node-text">Source-aligned</text>
+    <text x="447" y="739" text-anchor="middle" class="tiny">6 views</text>
+
+    <rect x="550" y="640" width="155" height="125" rx="20" fill="#203944" stroke="#94bdd0" stroke-width="2.3"/>
+    <text x="627" y="680" text-anchor="middle" class="node-title">Silver</text>
+    <text x="627" y="711" text-anchor="middle" class="node-text">Clean + parse</text>
+    <text x="627" y="739" text-anchor="middle" class="tiny">11 views</text>
+
+    <rect x="730" y="640" width="155" height="125" rx="20" fill="#3a3421" stroke="#f0cf61" stroke-width="2.6"/>
+    <text x="807" y="680" text-anchor="middle" class="node-title" fill="#f0cf61">Gold</text>
+    <text x="807" y="711" text-anchor="middle" class="node-text">Analytics marts</text>
+    <text x="807" y="739" text-anchor="middle" class="tiny">10 tables</text>
+
+    <text x="715" y="812" text-anchor="middle" class="tiny">Tested grain • reusable metrics • BigQuery SQL</text>
+  </g>
+
+  <!-- Orchestration -->
+  <g filter="url(#shadow)">
+    <rect x="45" y="555" width="230" height="295" rx="24" class="panel"/>
+    <text x="70" y="598" class="section">Orchestration</text>
+    <circle cx="160" cy="680" r="60" fill="#22353c" stroke="#b8a5e6" stroke-width="3"/>
+    <path d="M127 659 c18-23 48-23 66 0 M127 701 c18 23 48 23 66 0 M119 680 h82 M160 620 v120" fill="none" stroke="#b8a5e6" stroke-width="5" stroke-linecap="round"/>
+    <text x="160" y="780" text-anchor="middle" class="node-title">GitHub Actions</text>
+    <text x="160" y="810" text-anchor="middle" class="tiny">Daily 09:00 ICT + manual</text>
+  </g>
+
+  <!-- Flows -->
+  <path d="M275 325 H330" class="flow"/>
+  <path d="M560 325 H615" class="flow"/>
+  <path d="M740 490 V525 H447 V640" class="flow"/>
+  <path d="M525 703 H550" class="flow"/>
+  <path d="M705 703 H730" class="flow"/>
+  <path d="M885 703 H1140 V345 H1180" class="flow"/>
+  <path d="M885 703 H1140 V585 H1180" class="flow"/>
+  <path d="M275 702 H315 V383 H330" class="dash"/>
+  <path d="M275 735 H305 V820 H715 V850" class="dash"/>
+
+  <text x="302" y="307" text-anchor="middle" class="tiny">extract</text>
+  <text x="587" y="307" text-anchor="middle" class="tiny">load</text>
+  <text x="1140" y="325" text-anchor="middle" class="tiny">serve</text>
+  <text x="720" y="920" text-anchor="middle" class="subtitle">Reliable data → explainable metrics → actionable product and content decisions</text>
+</svg>

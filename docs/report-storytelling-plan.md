@@ -315,21 +315,18 @@ Hai nhóm quyết định cuối cùng:
 
 ## 12. Model dbt hiện có
 
-### Intermediate
+### Silver
 
 | Model | Grain | Vai trò |
 |---|---|---|
-| `int_device_traffic` | Một dòng trên một event DeviceDetail hợp lệ | Extract `device_id` và hành vi truy cập trang sản phẩm |
-| `int_comparison_event` | Một dòng trên một `session_id + device_id` | Danh sách sản phẩm duy nhất xuất hiện trong comparison session |
-| `int_event_behavior` | Một dòng trên một event | Chuẩn hóa event thành traffic, discovery, comparison, authentication hoặc other |
-| `int_session_activity` | Một dòng trên một `session_id` | Tổng hợp hoạt động và cờ hành vi ở cấp session |
-| `int_session_funnel` | Một dòng trên một DeviceDetail session | Xác định các bước funnel theo đúng thứ tự thời gian |
-| `int_product_interest_daily` | Một dòng trên một `event_date + device_id` | Kết hợp lượt xem và comparison interest hằng ngày |
-| `int_product_interest_trend` | Một dòng trên một `week + device_id` | So sánh interest với kỳ quan sát trước |
-| `int_comparison_sort_event` | Một dòng trên một sort event | Extract `device_ids`, `sort_by` và `sort_direction` từ JSON |
-| `int_comparison_sort_segment_pair` | Một dòng trên một `sort event + segment pair` | Gắn tiêu chí sort với đúng các sản phẩm trong comparison payload |
-| `int_comparison_segment_pair` | Một dòng trên một `session_id + segment pair` | Tạo cặp phân khúc không phân biệt thứ tự |
-| `int_product_data_completeness` | Một dòng trên một `device_id` | Đo completeness và danh sách field còn thiếu |
+| `silver_user_event_tracking` | Một dòng trên một event | Chuẩn hóa timestamp, parse `page_name` và `device_id`, gán `behavior_group` |
+| `silver_device_traffic_event` | Một dòng trên một event DeviceDetail hợp lệ | Extract `device_id` và hành vi truy cập trang sản phẩm |
+| `silver_session_activity` | Một dòng trên một `session_id` | Tổng hợp hoạt động và cờ hành vi ở cấp session |
+| `silver_session_funnel` | Một dòng trên một DeviceDetail session | Xác định các bước funnel theo đúng thứ tự thời gian |
+| `silver_comparison_session_device` | Một dòng trên một `session_id + device_id` | Danh sách sản phẩm duy nhất xuất hiện trong comparison session |
+| `silver_comparison_sort_event` | Một dòng trên một sort event | Extract `device_ids`, `sort_by` và `sort_direction` từ JSON |
+
+Project không còn tầng intermediate. Logic chỉ phục vụ một mart được nhúng thẳng vào mart đó dưới dạng CTE: segment pair nằm trong `mart_comparison_segment_pairs` và `mart_comparison_sort_criteria`, completeness nằm trong `mart_product_data_quality_priority`, weekly interest nằm trong `mart_product_interest`.
 
 ### Gold
 
@@ -347,29 +344,30 @@ Hai nhóm quyết định cuối cùng:
 
 `mart_user_os` đang được phát triển và chưa nên coi là model hoàn chỉnh cho đến khi xác định rõ grain và metric cần phân tích.
 
-## 13. Intermediate models đã bổ sung
+## 13. Silver models và logic nhúng trong Gold
 
-Các model dưới đây đã được tạo bằng BigQuery SQL. JSON của sort event đã được xác nhận gồm `device_ids`, `sort_by` và `sort_direction`.
+Các model được viết bằng BigQuery SQL. JSON của sort event đã được xác nhận gồm `device_ids`, `sort_by` và `sort_direction`. Logic dùng chung nằm trong Silver; logic một lần dùng nằm trong Gold.
 
-### 13.1. `int_event_behavior`
+### 13.1. `silver_user_event_tracking`
 
-**Mục đích:** Chuẩn hóa event thành nhóm hành vi.
+**Mục đích:** Chuẩn hóa event, parse trường JSON và gán nhóm hành vi.
 
 **Grain:** Một dòng trên một event.
 
-**Input:** `silver_user_event_tracking`.
+**Input:** `bronze_user_event_tracking`.
 
 **Output chính:**
 
 ```text
-event_id
+id
 event_at_timestamp
-event_date
+event_at_date
 session_id
 user_id
 event_name
-behavior_group
+page_name
 device_id
+behavior_group
 ```
 
 Mapping `behavior_group`:
@@ -382,13 +380,13 @@ authentication
 other
 ```
 
-### 13.2. `int_session_activity`
+### 13.2. `silver_session_activity`
 
 **Mục đích:** Tạo nền tảng cho KPI theo session.
 
 **Grain:** Một dòng trên một `session_id`.
 
-**Input:** `int_event_behavior`.
+**Input:** `silver_user_event_tracking`.
 
 **Output chính:**
 
@@ -405,13 +403,13 @@ has_comparison
 has_login
 ```
 
-### 13.3. `int_session_funnel`
+### 13.3. `silver_session_funnel`
 
 **Mục đích:** Xác định mỗi session đã đạt các bước nào trong funnel.
 
 **Grain:** Một dòng trên một `session_id`.
 
-**Input:** `int_event_behavior`.
+**Input:** `silver_user_event_tracking`.
 
 **Output chính:**
 
@@ -430,13 +428,13 @@ first_select_for_comparison_at
 first_comparison_sort_at
 ```
 
-### 13.4. `int_product_interest_daily`
+### 13.4. Logic interest hằng ngày (trong `mart_product_interest`)
 
 **Mục đích:** Kết hợp product views và comparison interest.
 
-**Grain:** Một dòng trên một `event_date + device_id`.
+**Grain:** Một dòng trên một `event_date + device_id` (CTE bên trong mart).
 
-**Input:** `mart_device_traffic` và `mart_compared_devices_daily`, hoặc trực tiếp từ hai intermediate model tương ứng.
+**Input:** `mart_device_traffic` và `mart_compared_devices_daily`.
 
 **Output chính:**
 
@@ -449,13 +447,13 @@ compared_sessions
 comparison_to_view_ratio
 ```
 
-### 13.5. `int_product_interest_trend`
+### 13.5. Logic xu hướng tuần (trong `mart_product_interest`)
 
 **Mục đích:** Đo xu hướng tăng hoặc giảm của interest.
 
 **Grain:** Một dòng trên một `period_start + device_id`.
 
-**Input:** `int_product_interest_daily`.
+**Input:** CTE interest hằng ngày bên trong cùng mart.
 
 **Output chính:**
 
@@ -472,7 +470,7 @@ comparison_growth_rate
 
 Nên dùng tuần thay vì ngày nếu traffic không đủ lớn.
 
-### 13.6. `int_comparison_sort_event`
+### 13.6. `silver_comparison_sort_event`
 
 **Mục đích:** Extract tiêu chí được dùng để sort bảng comparison.
 
@@ -494,23 +492,23 @@ sort_direction
 
 `sort_field` trong model được chuẩn hóa từ key `sort_by` của payload.
 
-### 13.7. `int_comparison_sort_segment_pair`
+### 13.7. Logic segment pair của sort (trong `mart_comparison_sort_criteria`)
 
 **Mục đích:** Gắn tiêu chí sort với đúng các phân khúc sản phẩm xuất hiện trong payload của sort event.
 
 **Grain:** Một dòng trên một `event_id + segment_a + segment_b`.
 
-**Input:** `int_comparison_sort_event` và `silver_laptop_model`.
+**Input:** `silver_comparison_sort_event` và `silver_laptop_model`.
 
 Model unnest `device_ids`, join từng ID với sản phẩm rồi tạo cặp không phân biệt thứ tự bằng `LEAST` và `GREATEST`.
 
-### 13.8. `int_comparison_segment_pair`
+### 13.8. Logic segment pair của comparison session (trong `mart_comparison_segment_pairs`)
 
 **Mục đích:** Tạo các cặp phân khúc xuất hiện trong cùng comparison session.
 
 **Grain:** Một dòng trên một `session_id + segment_a + segment_b`.
 
-**Input:** `int_comparison_event` và `silver_laptop_model`.
+**Input:** `silver_comparison_session_device` và `silver_laptop_model`.
 
 **Output chính:**
 
@@ -523,7 +521,7 @@ segment_b
 
 Phải chuẩn hóa thứ tự cặp bằng `LEAST` và `GREATEST` để tránh tách `A-B` và `B-A` thành hai cặp.
 
-### 13.9. `int_product_data_completeness`
+### 13.9. Logic completeness (trong `mart_product_data_quality_priority`)
 
 **Mục đích:** Đo mức độ đầy đủ thông tin của từng sản phẩm.
 
@@ -549,7 +547,7 @@ missing_field_list
 
 **Grain:** Một dòng trên một `event_date`.
 
-**Input:** `int_event_behavior` và `int_session_activity`.
+**Input:** `silver_user_event_tracking` và `silver_session_activity`.
 
 **Metrics:**
 
@@ -569,7 +567,7 @@ comparison_session_rate
 
 **Grain:** Một dòng trên một `event_date + funnel_step`.
 
-**Input:** `int_session_funnel`.
+**Input:** `silver_session_funnel`.
 
 **Metrics:**
 
@@ -587,7 +585,7 @@ drop_off_rate
 
 **Grain:** Một dòng trên một `device_id` cho toàn bộ khoảng thời gian phân tích hoặc một dòng trên `period_start + device_id` nếu cần filter thời gian.
 
-**Input:** `int_product_interest_daily` và `int_product_interest_trend`.
+**Input:** `mart_device_traffic` và `mart_compared_devices_daily`.
 
 **Metrics:**
 
@@ -614,7 +612,7 @@ low_view_low_comparison
 
 **Grain:** Một dòng trên một `segment_a + segment_b`.
 
-**Input:** `int_comparison_segment_pair`.
+**Input:** `silver_comparison_session_device` và `silver_laptop_model` (logic pair nằm trong CTE).
 
 **Metrics:**
 
@@ -629,7 +627,7 @@ last_seen_at
 
 **Grain:** Một dòng trên một `sort_field`, hoặc `segment_a + segment_b + sort_field` nếu kết hợp với comparison pair.
 
-**Input:** `int_comparison_sort_segment_pair`, được xây từ chính `device_ids` trong sort event.
+**Input:** `silver_comparison_sort_event` và `silver_laptop_model` (logic segment pair nằm trong CTE), được xây từ chính `device_ids` trong sort event.
 
 **Metrics:**
 
@@ -643,7 +641,7 @@ share_of_sorting_sessions
 
 **Grain:** Một dòng trên một `device_id`.
 
-**Input:** `int_product_data_completeness` và `mart_product_interest`.
+**Input:** `silver_laptop_model`, `silver_laptop_benchmark_result` và `mart_product_interest` (logic completeness nằm trong CTE).
 
 **Output chính:**
 
@@ -671,35 +669,27 @@ low_priority
 
 ```text
 silver_user_event_tracking
-    -> int_event_behavior
-        -> int_session_activity
-            -> mart_daily_site_kpis
-        -> int_session_funnel
-            -> mart_behavior_funnel
+    -> silver_session_activity
+        -> mart_daily_site_kpis
+    -> silver_session_funnel
+        -> mart_behavior_funnel_daily
+    -> silver_device_traffic_event
+        -> mart_device_traffic
+    -> silver_comparison_session_device
+        -> mart_compared_devices_daily
+            -> mart_most_compared_devices
+        -> mart_comparison_segment_pairs (logic pair trong CTE)
+    -> silver_comparison_sort_event
+        -> mart_comparison_sort_criteria (logic pair trong CTE)
 
-int_device_traffic
-    -> mart_device_traffic
-        -> int_product_interest_daily
-            -> int_product_interest_trend
-                -> mart_product_interest
-
-int_comparison_event
-    -> mart_compared_devices_daily
-    -> mart_most_compared_devices
-    -> int_product_interest_daily
-    -> int_comparison_segment_pair
-        -> mart_comparison_segment_pairs
-
-int_comparison_sort_event
-    -> int_comparison_sort_segment_pair
-        -> mart_comparison_sort_criteria
+mart_device_traffic + mart_compared_devices_daily
+    -> mart_product_interest
 
 silver_laptop_model
 silver_laptop_benchmark_result
-    -> int_product_data_completeness
+    -> mart_product_data_quality_priority (logic completeness trong CTE)
 
 mart_product_interest
-int_product_data_completeness
     -> mart_product_data_quality_priority
 ```
 
@@ -716,18 +706,19 @@ int_product_data_completeness
 
 ### Model đã được triển khai
 
-1. `int_event_behavior`.
-2. `int_session_activity`.
+1. `silver_user_event_tracking` (parse `page_name`, `device_id`, `behavior_group`).
+2. `silver_session_activity`.
 3. `mart_daily_site_kpis`.
-4. `int_session_funnel`.
-5. `mart_behavior_funnel`.
-6. `int_product_interest_daily`.
-7. `int_product_interest_trend`.
-8. `mart_product_interest`.
-9. `int_comparison_sort_event` với các key đã xác nhận: `device_ids`, `sort_by`, `sort_direction`.
-10. `int_comparison_sort_event`.
-11. `int_comparison_segment_pair`.
-12. `mart_product_data_quality_priority`.
+4. `silver_session_funnel`.
+5. `mart_behavior_funnel_daily`.
+6. `silver_device_traffic_event` và `mart_device_traffic`.
+7. `silver_comparison_session_device` và `mart_compared_devices_daily`.
+8. `mart_most_compared_devices`.
+9. `silver_comparison_sort_event` với các key đã xác nhận: `device_ids`, `sort_by`, `sort_direction`.
+10. `mart_comparison_sort_criteria`.
+11. `mart_comparison_segment_pairs`.
+12. `mart_product_interest`.
+13. `mart_product_data_quality_priority`.
 
 Việc cần làm sau lần chạy BigQuery đầu tiên là kiểm tra kết quả ad hoc, xác nhận JSON key của sort event và hiệu chỉnh trọng số scoring. Không nên coi scoring version đầu tiên là business rule cố định.
 

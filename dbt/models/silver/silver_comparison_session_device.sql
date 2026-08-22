@@ -1,12 +1,13 @@
 {{ config(materialized='view') }}
 
+-- Grain: one row per session and distinct device in qualifying comparison sessions.
 WITH session_compared_devices AS (
     SELECT
         session_id,
         MIN(event_at_timestamp) AS first_event_at,
         MAX(event_at_timestamp) AS last_event_at,
         ARRAY_AGG(
-            DISTINCT SAFE_CAST(JSON_VALUE(event_data, '$.device_id') AS INT64)
+            DISTINCT device_id
             IGNORE NULLS
         ) AS compared_device_ids,
         COUNT(*) AS comparison_events
@@ -16,11 +17,9 @@ WITH session_compared_devices AS (
         'select_device_for_comparison',
         'comparison_chart_sort_selection'
     )
-      AND SAFE_CAST(JSON_VALUE(event_data, '$.device_id') AS INT64) IS NOT NULL
+      AND device_id IS NOT NULL
     GROUP BY session_id
-    HAVING COUNT(
-        DISTINCT SAFE_CAST(JSON_VALUE(event_data, '$.device_id') AS INT64)
-    ) > 1
+    HAVING COUNT(DISTINCT device_id) > 1
 ),
 
 session_device_long AS (

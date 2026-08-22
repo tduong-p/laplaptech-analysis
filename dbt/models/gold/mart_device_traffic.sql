@@ -28,7 +28,7 @@ SELECT
     COUNT(*) AS page_views,
     COUNT(DISTINCT dt.session_id) AS viewing_sessions
 
-FROM {{ ref('int_device_traffic') }} AS dt
+FROM {{ ref('silver_device_traffic_event') }} AS dt
 LEFT JOIN {{ ref('silver_laptop_model') }} AS d
     ON dt.device_id = d.id
 LEFT JOIN {{ ref('silver_brand') }} AS b

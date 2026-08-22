@@ -26,6 +26,35 @@ What do users view?
             -> What content or product information should be prioritized?
 ```
 
+## 2026-08-20 - Removed the intermediate layer
+
+### Decision
+
+The project previously exposed Bronze, Silver, Intermediate, and Gold model folders. A reviewer familiar with the medallion architecture suggested that the visible data layers should be limited to Bronze, Silver, and Gold. The intermediate folder was therefore removed.
+
+The change was implemented as a merge, not a deletion of logic:
+
+- Reusable behavioral facts moved into Silver:
+  - Event behavior classification was folded into `silver_user_event_tracking` as `page_name`, `device_id`, and `behavior_group`.
+  - `silver_device_traffic_event`, `silver_session_activity`, `silver_session_funnel`, `silver_comparison_session_device`, and `silver_comparison_sort_event` were created from the previous intermediate models.
+- Logic used by only one mart was inlined into the corresponding Gold model as a CTE:
+  - Segment-pair logic now lives inside `mart_comparison_segment_pairs` and `mart_comparison_sort_criteria`.
+  - Product-data completeness scoring now lives inside `mart_product_data_quality_priority`.
+  - Weekly product interest now lives inside `mart_product_interest`.
+- Aggregate marts read from daily marts instead of re-deriving events:
+  - `mart_most_compared_devices` reads from `mart_compared_devices_daily`.
+  - `mart_product_interest` reads from `mart_device_traffic` and `mart_compared_devices_daily`.
+
+### Resulting structure
+
+```text
+Bronze  -> raw source-aligned views
+Silver  -> cleaned, typed, and conformed business facts
+Gold    -> reporting marts, including Gold-on-Gold aggregation
+```
+
+No `int_` model remains. Model tests were moved to the Silver models that inherited the tested grains.
+
 ## 2026-08-19 - Repository, documentation, and BI architecture
 
 ### Repository restructuring
@@ -316,9 +345,7 @@ Bronze
 
 Silver
 - standardizes types, timestamps, names, Boolean values, and entities
-
-Intermediate
-- implements reusable behavioral logic and explicit grains
+- conforms reusable behavioral facts such as sessions, funnels, and comparison devices
 
 Gold
 - exposes reporting-ready metrics and dimensions
@@ -328,7 +355,7 @@ Medallion and star schema are not competing approaches:
 
 - Medallion describes transformation maturity.
 - Star schema describes analytical relationships between facts and dimensions.
-- A project can transform data through bronze/silver/intermediate layers and expose a star-like semantic model at the gold or BI layer.
+- A project can transform data through bronze/silver/gold layers and expose a star-like semantic model at the gold or BI layer.
 
 ### Grain-first modeling
 
@@ -340,13 +367,13 @@ Examples:
 silver_user_event_tracking
 = one tracked event
 
-int_session_activity
+silver_session_activity
 = one session
 
-int_comparison_event
+silver_comparison_session_device
 = one session + one distinct product
 
-int_product_interest_daily
+mart_device_traffic / mart_compared_devices_daily
 = one date + one product
 
 mart_product_interest
@@ -441,7 +468,7 @@ everything else                       -> other
 
 Downstream model:
 
-- `int_event_behavior`.
+- `silver_user_event_tracking` (via the `behavior_group` column).
 
 ### 6. Behavioral funnel
 
@@ -451,7 +478,7 @@ Question:
 
 Downstream models:
 
-- `int_session_funnel`.
+- `silver_session_funnel`.
 - `mart_behavior_funnel_daily`.
 
 ### 7. Product interest
@@ -474,9 +501,7 @@ Reasoning:
 
 Downstream models:
 
-- `int_product_interest_daily`.
-- `int_product_interest_trend`.
-- `mart_product_interest`.
+- `mart_product_interest` (daily interest and weekly trend are combined inside this mart).
 
 ### 8. Products and segments compared together
 
@@ -493,8 +518,7 @@ Limitation:
 
 Downstream models:
 
-- `int_comparison_segment_pair`.
-- `mart_comparison_segment_pairs`.
+- `mart_comparison_segment_pairs` (pair logic is inlined as a CTE).
 
 ### 9. Comparison sort criteria
 
@@ -516,8 +540,7 @@ This was a key analytical improvement because `device_ids` identifies the exact 
 
 Downstream models:
 
-- `int_comparison_sort_event`.
-- `int_comparison_sort_segment_pair`.
+- `silver_comparison_sort_event`.
 - `mart_comparison_sort_criteria`.
 
 ### 10. Segment pairs combined with sort criteria
@@ -606,8 +629,7 @@ high product views or comparisons
 
 Downstream models:
 
-- `int_product_data_completeness`.
-- `mart_product_data_quality_priority`.
+- `mart_product_data_quality_priority` (completeness scoring is inlined as a CTE).
 
 ## Reporting narrative
 

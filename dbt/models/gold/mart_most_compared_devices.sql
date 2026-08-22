@@ -1,23 +1,13 @@
 {{ config(materialized='table') }}
 
+-- Grain: one row per device.
 SELECT
-    scd.device_id,
-    d.name AS device_name,
-    d.brand_id,
-    b.name AS brand_name,
-
-    COUNT(DISTINCT scd.session_id) AS compared_sessions,
-    MIN(scd.first_event_at) AS first_compared_at,
-    MAX(scd.last_event_at) AS last_compared_at
-
-FROM {{ ref('int_comparison_event') }} AS scd
-LEFT JOIN {{ ref('silver_laptop_model') }} AS d
-    ON scd.device_id = d.id
-LEFT JOIN {{ ref('silver_brand') }} AS b
-    ON d.brand_id = b.id
-GROUP BY
-    scd.device_id,
-    d.name,
-    d.brand_id,
-    b.name
+    device_id,
+    ANY_VALUE(device_name) AS device_name,
+    ANY_VALUE(brand_name) AS brand_name,
+    SUM(compared_sessions) AS compared_sessions,
+    MIN(event_date) AS first_compared_date,
+    MAX(event_date) AS last_compared_date
+FROM {{ ref('mart_compared_devices_daily') }}
+GROUP BY device_id
 ORDER BY compared_sessions DESC

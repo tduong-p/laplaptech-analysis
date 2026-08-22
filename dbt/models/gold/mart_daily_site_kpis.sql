@@ -6,8 +6,8 @@ WITH event_metrics AS (
         event_at_date AS event_date,
         COUNT(*) AS total_events,
         COUNT(DISTINCT user_id) AS active_users,
-        COUNTIF(JSON_VALUE(event_data, '$.page_name') = 'DeviceDetail') AS product_views
-    FROM {{ ref('int_event_behavior') }}
+        COUNTIF(page_name = 'DeviceDetail') AS product_views
+    FROM {{ ref('silver_user_event_tracking') }}
     GROUP BY event_at_date
 ),
 
@@ -17,7 +17,7 @@ session_metrics AS (
         COUNT(*) AS total_sessions,
         COUNTIF(has_discovery) AS discovery_sessions,
         COUNTIF(has_comparison) AS comparison_sessions
-    FROM {{ ref('int_session_activity') }}
+    FROM {{ ref('silver_session_activity') }}
     GROUP BY session_date
 )
 
@@ -37,4 +37,3 @@ FROM event_metrics AS event
 FULL OUTER JOIN session_metrics AS session
     ON event.event_date = session.event_date
 ORDER BY event_date DESC
-

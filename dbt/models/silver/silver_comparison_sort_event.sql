@@ -18,4 +18,3 @@ SELECT
     JSON_VALUE(event_data, '$.sort_direction') AS sort_direction
 FROM {{ ref('silver_user_event_tracking') }}
 WHERE event_name = 'comparison_chart_sort_selection'
-
