@@ -21,11 +21,11 @@ funnel_long AS (
         sessions_reached
     FROM daily_counts
     CROSS JOIN UNNEST([
-        STRUCT(1 AS funnel_step, 'device_detail_view' AS step_name, step_1_sessions AS sessions_reached),
-        STRUCT(2 AS funnel_step, 'discovery' AS step_name, step_2_sessions AS sessions_reached),
-        STRUCT(3 AS funnel_step, 'add_to_comparison' AS step_name, step_3_sessions AS sessions_reached),
-        STRUCT(4 AS funnel_step, 'select_device_for_comparison' AS step_name, step_4_sessions AS sessions_reached),
-        STRUCT(5 AS funnel_step, 'comparison_chart_sort_selection' AS step_name, step_5_sessions AS sessions_reached)
+        STRUCT(1 AS funnel_step, 'Device Detail View' AS step_name, step_1_sessions AS sessions_reached),
+        STRUCT(2 AS funnel_step, 'Discovery' AS step_name, step_2_sessions AS sessions_reached),
+        STRUCT(3 AS funnel_step, 'Add to Comparison' AS step_name, step_3_sessions AS sessions_reached),
+        STRUCT(4 AS funnel_step, 'Select Device for Comparison' AS step_name, step_4_sessions AS sessions_reached),
+        STRUCT(5 AS funnel_step, 'Comparison Chart Sort' AS step_name, step_5_sessions AS sessions_reached)
     ])
 ),
 
