@@ -133,7 +133,7 @@ combined AS (
         ON completeness.device_id = interest.device_id
 ),
 
-scored AS (
+ranked AS (
     SELECT
         *,
         PERCENT_RANK() OVER (
@@ -149,7 +149,7 @@ with_priority AS (
             + 0.20 * trend_score
             + 0.35 * (1 - critical_completeness_score)
             AS data_update_priority_score
-    FROM scored
+    FROM ranked
 )
 
 SELECT
