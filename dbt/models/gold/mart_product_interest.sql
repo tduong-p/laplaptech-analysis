@@ -1,6 +1,6 @@
 {{ config(materialized='table') }}
 
--- Grain: one row per period_start and device_id.
+-- Grain: one row per period_start (monthly) and device_id.
 WITH daily_interest AS (
     SELECT
         COALESCE(traffic.event_date, comparison.event_date) AS event_date,
@@ -16,9 +16,9 @@ WITH daily_interest AS (
         AND traffic.device_id = comparison.device_id
 ),
 
-weekly AS (
+monthly AS (
     SELECT
-        DATE_TRUNC(event_date, WEEK(MONDAY)) AS period_start,
+        DATE_TRUNC(event_date, MONTH) AS period_start,
         device_id,
         ANY_VALUE(device_name) AS device_name,
         ANY_VALUE(brand_name) AS brand_name,
@@ -40,7 +40,7 @@ with_previous_period AS (
             PARTITION BY device_id
             ORDER BY period_start
         ) AS previous_compared_sessions
-    FROM weekly
+    FROM monthly
 ),
 
 scored AS (
