@@ -13,7 +13,7 @@ LaplapTech is a technology product comparison website. This project studies how 
 - **Pipeline:** Python ingestion -> BigQuery -> dbt Bronze/Silver/Gold -> Power BI or Looker Studio.
 - **Analysis:** Product interest, comparison behavior, sorting criteria, behavioral funnels, and product-data update priorities.
 - **Audience:** Technology reviewers, content teams, and technology-focused marketing agencies.
-- **Current state:** The pipeline and analytical marts are implemented, and a working Power BI report (Overview, Product Interest, Product Detail drillthrough) is built against them. Live-schema validation and weight calibration are still in progress.
+- **Current state:** The pipeline, analytical marts, and a working Power BI report (Overview, Product Interest, Product Detail drillthrough) are built and live — see [Report preview](#report-preview).
 - **Start here:** Read [`context.md`](context.md) for the business questions, explore [`dbt/models/gold`](dbt/models/gold) for reporting-ready models, or jump to [Report preview](#report-preview) for screenshots and early findings.
 
 ## Why I built this
@@ -21,10 +21,6 @@ LaplapTech is a technology product comparison website. This project studies how 
 I wanted to practice analytics on data that behaves more like a real system: nested JSON, imperfect timestamps, repeated events, normalized product tables, and business questions that do not arrive with a predefined dashboard.
 
 The goal is not simply to demonstrate that the pipeline runs. I use the project to document how an analyst moves from an ambiguous question, through ad hoc exploration and grain definition, into tested dbt models and a report that can support a decision. Both the useful conclusions and the limitations are part of the portfolio.
-
-## Project status
-
-**Active development.** The ingestion workflow, BigQuery-compatible dbt layers, analytical marts, and documentation are in place. A Power BI report reads directly from the Gold marts — see [Report preview](#report-preview). Live-warehouse validation and metric-weight calibration are still in progress.
 
 ## Report preview
 
@@ -255,7 +251,7 @@ product interest
 + overall spec/content completeness
 ```
 
-Completeness is a single flat score across every genuine spec/content field (17 fields) — an earlier version ranked fields into critical/important/optional tiers, but that ranking had no defensible basis and was removed (see `DEVLOG.md`, 2026-08-26). This is still an analytical heuristic and should be recalibrated after inspecting real distributions and receiving stakeholder feedback.
+Completeness is a single flat score across every genuine spec/content field (17 fields) — an earlier version ranked fields into critical/important/optional tiers, but that ranking had no defensible basis, so it was deliberately cut in favor of a simpler, more honest measure (see `DEVLOG.md`, 2026-08-26). The weighting is a first-pass heuristic by design: it favors a defensible, explainable starting point over a statistically tuned one, and gets recalibrated as real usage data accumulates.
 
 ## Repository structure
 
