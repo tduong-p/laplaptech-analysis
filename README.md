@@ -28,33 +28,33 @@ The goal is not simply to demonstrate that the pipeline runs. I use the project 
 
 ## Report preview
 
-**[Open the live Power BI report →](https://app.powerbi.com/view?r=eyJrIjoiOTA1MmY3NzgtY2NmNi00MmJhLWJkNDAtNWI2ZWE4MGIyZmE3IiwidCI6IjMzMzMzMjdjLTI2MmEtNGY1Ny04MjI4LWQwNzViMWJiNDA5NiIsImMiOjEwfQ%3D%3D)**
+[![Open the live Power BI report](https://img.shields.io/badge/Power_BI-Open_the_live_report-F2C811?style=for-the-badge&logo=powerbi&logoColor=black)](https://app.powerbi.com/view?r=eyJrIjoiOTA1MmY3NzgtY2NmNi00MmJhLWJkNDAtNWI2ZWE4MGIyZmE3IiwidCI6IjMzMzMzMjdjLTI2MmEtNGY1Ny04MjI4LWQwNzViMWJiNDA5NiIsImMiOjEwfQ%3D%3D)
 
-The report is built directly on the Gold marts described below — three pages: an overview landing page, a product-interest explorer, and a per-product drillthrough detail page. Numbers below are a snapshot from one time window, not a validated trend; see [Known limitations](#known-limitations) before generalizing any of it.
+The report is built directly on the Gold marts described below — three pages: an overview landing page, a product-interest explorer, and a per-product drillthrough detail page. Each finding below is tied to a specific question from the [ad hoc analysis backlog](context.md#7-ad-hoc-analysis-backlog) in `context.md`, not a free-floating observation. Numbers are a snapshot from one time window, not a validated trend; see [Known limitations](#known-limitations) before generalizing any of it.
 
 ### Overview
 
 ![Overview page](docs/assets/report-overview.png)
 
-- 761K events and 106K product-detail views observed in this window, with a 12.25% comparison-session rate — most visits stop at browsing rather than reaching the comparison tool.
-- Visitor OS skews heavily mobile: iOS (37%) and Android (35%) together account for 72% of sessions, versus Windows (22%) and macOS (4%). For a laptop-comparison site, that is a strong signal that content and UX decisions should be evaluated mobile-first, not desktop-first.
-- The funnel is reach-based, not strictly sequential, and the data shows it directly: "Select device for comparison" (6K) has *higher* reach than "Add to comparison" (4K) in the same window. Read each bar as "sessions that touched this step at least once," not as a strict pipeline.
-- `Lenovo Slim 7` currently leads the content/data-update priority queue (interest 1.00, completeness 0.65 → priority score 0.74).
+- **Q6 — funnel conversion and drop-off:** 761K events and 106K product-detail views in this window, with only a 12.25% comparison-session rate — most visits stop at browsing rather than reaching the comparison tool.
+- **Q6 — funnel methodology check:** the funnel is reach-based, not strictly sequential, and the data confirms it directly: "Select device for comparison" (6K) has *higher* reach than "Add to comparison" (4K) in the same window. Each bar should be read as "sessions that touched this step at least once," not as a strict pipeline.
+- **Q7 — OS distribution:** visitor OS skews heavily mobile — iOS (37%) and Android (35%) together account for 72% of sessions, versus Windows (22%) and macOS (4%). For a laptop-comparison site, that is a signal worth testing against content and UX decisions that currently assume a desktop-first visitor.
+- **Q13 — high interest + incomplete specs:** `Lenovo Slim 7` currently leads the content/data-update priority queue (interest 1.00, completeness 0.65 → priority score 0.74).
 
 ### Product Interest
 
 ![Product Interest page](docs/assets/report-product-interest.png)
 
-- 138 active products this period, of which 49 (about a third) fall into the `High View · High Comparison` segment — the group most worth immediate editorial attention.
-- `Asus Zenbook A14` stands out with +585% view growth and +180% comparison growth month-over-month — a concrete, checkable spike worth pairing with external context (a review, a price change, a launch) rather than treating as an isolated statistic.
-- The active catalog is not laptops-only: a small number of non-laptop devices (e.g. a phone) are present and classified under `Mobile Device`. Worth remembering when reading "product catalog" elsewhere in this project.
+- **Q8/Q9 — most-viewed and most-compared products:** 138 active products this period, of which 49 (about a third) fall into the `High View · High Comparison` segment — the group most worth immediate editorial attention.
+- **Q14 — is the catalog keeping pace with attention:** `Asus Zenbook A14` stands out with +585% view growth and +180% comparison growth month-over-month — a concrete, checkable spike worth pairing with external context (a review, a price change, a launch) rather than treating as an isolated statistic.
+- **Scope note, not an ad hoc question:** the active catalog is not laptops-only — a small number of non-laptop devices (e.g. a phone) are present and classified under `Mobile Device`. Worth remembering when reading "product catalog" elsewhere in this project.
 
 ### Product Detail
 
 ![Product Detail page](docs/assets/report-product-detail.png)
 
-- Drillthrough from either page above lands here filtered to one product, showing its own interest score, view/comparison growth, missing specification fields, and a full monthly page-view trend rather than a single aggregated number.
-- The trend view is where a single-number KPI would have hidden the story: an early sharp spike followed by a long noisy tail is a very different shape than a flat average would suggest, and it invites a "what happened around that spike" follow-up question rather than a conclusion.
+- **Q13 — same question, single-product view:** drillthrough from either page above lands here filtered to one product, showing its own interest score, view/comparison growth, and missing specification fields instead of a catalog-wide average.
+- **Q14 — trend shape, not just a growth percentage:** the monthly page-view trend can show an early sharp spike followed by a long noisy tail — a very different shape than the growth-rate percentage alone would suggest, and it invites a "what happened around that spike" follow-up rather than a conclusion.
 
 ## Dataset provenance and attribution
 
@@ -87,9 +87,9 @@ The detailed business context, analytical assumptions, stakeholders, pain points
 
 ## Architecture
 
-![LaplapTech analytics pipeline architecture](docs/assets/laplaptech-architecture.svg)
+![LaplapTech analytics pipeline architecture](docs/assets/laplaptech-architecture.png)
 
-The GitHub Actions workflow runs at `02:00 UTC` every day, approximately `09:00` in Vietnam, and can also be triggered manually.
+The GitHub Actions workflow runs at `02:00 UTC` every day (approximately `09:00` in Vietnam), on every push to `main`, and can also be triggered manually.
 
 ### Architectural components
 
@@ -269,13 +269,15 @@ laplaptech-analysis/
 ├── requirements.txt
 ├── docs/
 │   └── assets/
-│       ├── laplaptech-architecture.svg
+│       ├── laplaptech-architecture.png
+│       ├── laplaptech-architecture.excalidraw
 │       ├── report-overview.png
 │       ├── report-product-interest.png
 │       └── report-product-detail.png
 ├── ingestion/
 │   └── clickhouse_to_bigquery.py
 └── dbt/
+    ├── README.md
     ├── dbt_project.yml
     ├── profiles.yml
     ├── models/
