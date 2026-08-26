@@ -113,7 +113,7 @@ Only questions already raised during project exploration are included below.
 
 ### Product and content priorities
 
-13. Which products combine high current interest, increasing interest, and incomplete critical specifications?
+13. Which products combine high current interest, increasing interest, and incomplete specifications?
 14. Is the product catalog being updated quickly enough to follow changes in audience attention?
 15. Which product groups have the largest information gaps and should be prioritized for further data collection?
 16. Do devices with stronger measured battery performance receive different levels of views or comparison interest than gaming-oriented or high-benchmark devices?
@@ -134,7 +134,7 @@ For `comparison_chart_sort_selection`, the JSON payload may contain the exact `d
 
 ### Product-data update priority
 
-The first analytical heuristic combines product interest, recent interest trend, and missing critical specifications. The score supports prioritization; it is not yet a validated business rule.
+The current analytical heuristic combines product interest, recent interest trend, and overall specification/content completeness (a flat share of missing fields, not a critical/important/optional ranking). The score supports prioritization; it is not yet a validated business rule.
 
 ## 9. Expected analytics outputs
 
@@ -144,7 +144,7 @@ The project produces Gold marts for:
 - Behavioral funnel performance.
 - Product-detail traffic.
 - Most-compared products.
-- Weekly product interest and trend.
+- Monthly product interest and trend.
 - Product segment pairs considered together.
 - Comparison sorting criteria.
 - Product-data quality and update priority.
@@ -164,5 +164,4 @@ These marts are intended to support a report narrative that progresses from data
 ## 11. Project documents
 
 - [`README.md`](README.md): architecture, implementation, setup, and repository showcase.
-- [`DEVLOG.md`](DEVLOG.md): dated decisions and the evolution of the project reasoning.
-- [`docs/report-storytelling-plan.md`](docs/report-storytelling-plan.md): proposed reporting structure and visualization narrative.
+- [`DEVLOG.md`](DEVLOG.md): dated decisions and the evolution of the project reasoning, including the reporting narrative and Power BI structure.

@@ -704,6 +704,51 @@ Sort criteria show which specifications matter in that evaluation.
 Completeness shows whether the website can satisfy that demand.
 ```
 
+## 2026-08-26 - Simplified product-data-quality priority scoring
+
+### Decision
+
+`mart_product_data_quality_priority` previously grouped completeness fields into `critical` / `important` / `optional` tiers, each with a hand-picked weight. On review, there was no defensible basis for ranking one missing field as more important than another — the tiering was an implementation-time judgment call, not something derived from data or confirmed by the LaplapTech team. It was removed.
+
+The mart now computes a single `completeness_score`: 1 minus the share of missing fields across a flat list of 17 genuine product-spec/content fields. `priority_group` and `data_update_priority_score` both read from this one score instead of the old `critical_completeness_score`.
+
+`year_introduce` was added to the tracked fields — it is a real spec that can be missing and was previously not checked at all.
+
+### Fields intentionally excluded from completeness
+
+Not every column on `silver_laptop_model` represents a content gap when null, so the following are left out of the missing-field count:
+
+- Identity fields (`id`, `name`) — required for the row to exist meaningfully.
+- Audit fields (`created_by_fk`, `changed_by_fk`) — record-keeping, not product content.
+- Status flags (`is_active`, `is_visible`, `is_gaming_laptop`, `is_workstation`, `is_mobile_device`) and the derived `usage_segment` — booleans/derived categories, not "missing" in the same sense as a spec value.
+- `brand_model_codename` — not every product has an official codename; its absence does not indicate incomplete data.
+
+### Reporting label cleanup
+
+`interest_segment`, `priority_group`, and `usage_segment` previously output raw snake_case values (`high_view_high_comparison`, `update_now`, `general_laptop`). These are now produced as Title Case text directly in dbt (`silver_laptop_model`, `mart_product_interest`, `mart_product_data_quality_priority`) so Power BI can display them without a DAX-side cleanup pass. The `accepted_values` test on `priority_group` was updated to match.
+
+### Grain change
+
+`mart_product_interest` moved from weekly to monthly `period_start`. Weekly buckets were noisier than useful given the traffic volume, and monthly aligns better with how the update-priority and content-planning decisions are actually made.
+
+## 2026-08-26 - Built the first Power BI report and retired the standalone reporting docs
+
+### What was built
+
+A working Power BI report was built directly against the Gold marts: an Overview page (KPI pulse, content/data update priority table, session funnel, visitor OS split), a Product Interest Overview page (views-vs-comparison quadrant, condensed interest table), and a Product Detail drillthrough page (per-product interest trend, growth rates, missing-field list). This is the first time the project's marts have been exercised end-to-end in a real BI tool rather than described in planning documents.
+
+### Docs retired
+
+`docs/report-storytelling-plan.md` and `docs/dashboard-demo.html` were removed. Both were planning artifacts written before the Power BI report existed — the storytelling reasoning they captured is preserved in this log's dated history, and the actual report now supersedes the static HTML mockup. Keeping either around after the real report shipped would have left two conflicting descriptions of "what the report looks like."
+
+### Early observations from real data (subject to further validation)
+
+- Visitor OS skews heavily mobile (iOS + Android well above Windows) for a laptop-comparison audience — worth checking whether content/UX should lean more mobile-first.
+- The session funnel's reach-based counting (not strictly sequential) shows up in the data itself: "select device for comparison" reach exceeds "add to comparison" reach in the same window, confirming the funnel should keep being read as reach per step, not a strict pipeline.
+- The active catalog includes a few non-laptop devices (e.g., a phone) classified under `Mobile Device` — a reminder that "product catalog" here is broader than laptops alone.
+
+These are first impressions from one time window, not validated findings — see `context.md` for why the catalog and this reasoning should not be generalized to the broader market.
+
 ## Open technical and analytical items
 
 1. Replace watermark-only append ingestion with staging and `MERGE ON id`.
@@ -712,8 +757,7 @@ Completeness shows whether the website can satisfy that demand.
 4. Quantify null and multi-user session IDs.
 5. Add a persistent event-quality mart or monitoring query.
 6. Run every model and test against the live BigQuery schema.
-7. Review weekly interest distributions before finalizing weights.
+7. Review monthly interest distributions before finalizing weights.
 8. Confirm whether all DeviceDetail events represent a page view or whether a more specific event name is required.
-9. Build the Power BI date dimension, relationships, and DAX measures.
-10. Add final report screenshots, findings, and recommendations to the README.
-11. Add a content inventory before implementing a real content-opportunity model.
+9. Add a content inventory before implementing a real content-opportunity model.
+10. Validate the removed completeness tiering's replacement (flat `completeness_score`) against real distributions once more data has accumulated.

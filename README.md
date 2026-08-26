@@ -13,8 +13,8 @@ LaplapTech is a technology product comparison website. This project studies how 
 - **Pipeline:** Python ingestion -> BigQuery -> dbt Bronze/Silver/Gold -> Power BI or Looker Studio.
 - **Analysis:** Product interest, comparison behavior, sorting criteria, behavioral funnels, and product-data update priorities.
 - **Audience:** Technology reviewers, content teams, and technology-focused marketing agencies.
-- **Current state:** The pipeline and analytical marts are implemented; live validation, metric calibration, and the final BI report are in progress.
-- **Start here:** Read [`context.md`](context.md) for the business questions or explore [`dbt/models/gold`](dbt/models/gold) for reporting-ready models.
+- **Current state:** The pipeline and analytical marts are implemented, and a working Power BI report (Overview, Product Interest, Product Detail drillthrough) is built against them. Live-schema validation and weight calibration are still in progress.
+- **Start here:** Read [`context.md`](context.md) for the business questions, explore [`dbt/models/gold`](dbt/models/gold) for reporting-ready models, or jump to [Report preview](#report-preview) for screenshots and early findings.
 
 ## Why I built this
 
@@ -24,7 +24,37 @@ The goal is not simply to demonstrate that the pipeline runs. I use the project 
 
 ## Project status
 
-**Active development.** The ingestion workflow, BigQuery-compatible dbt layers, analytical marts, and documentation are in place. Live warehouse validation, metric calibration, and the final Power BI report are still in progress.
+**Active development.** The ingestion workflow, BigQuery-compatible dbt layers, analytical marts, and documentation are in place. A Power BI report reads directly from the Gold marts — see [Report preview](#report-preview). Live-warehouse validation and metric-weight calibration are still in progress.
+
+## Report preview
+
+**[Open the live Power BI report →](https://app.powerbi.com/view?r=eyJrIjoiOTA1MmY3NzgtY2NmNi00MmJhLWJkNDAtNWI2ZWE4MGIyZmE3IiwidCI6IjMzMzMzMjdjLTI2MmEtNGY1Ny04MjI4LWQwNzViMWJiNDA5NiIsImMiOjEwfQ%3D%3D)**
+
+The report is built directly on the Gold marts described below — three pages: an overview landing page, a product-interest explorer, and a per-product drillthrough detail page. Numbers below are a snapshot from one time window, not a validated trend; see [Known limitations](#known-limitations) before generalizing any of it.
+
+### Overview
+
+![Overview page](docs/assets/report-overview.png)
+
+- 761K events and 106K product-detail views observed in this window, with a 12.25% comparison-session rate — most visits stop at browsing rather than reaching the comparison tool.
+- Visitor OS skews heavily mobile: iOS (37%) and Android (35%) together account for 72% of sessions, versus Windows (22%) and macOS (4%). For a laptop-comparison site, that is a strong signal that content and UX decisions should be evaluated mobile-first, not desktop-first.
+- The funnel is reach-based, not strictly sequential, and the data shows it directly: "Select device for comparison" (6K) has *higher* reach than "Add to comparison" (4K) in the same window. Read each bar as "sessions that touched this step at least once," not as a strict pipeline.
+- `Lenovo Slim 7` currently leads the content/data-update priority queue (interest 1.00, completeness 0.65 → priority score 0.74).
+
+### Product Interest
+
+![Product Interest page](docs/assets/report-product-interest.png)
+
+- 138 active products this period, of which 49 (about a third) fall into the `High View · High Comparison` segment — the group most worth immediate editorial attention.
+- `Asus Zenbook A14` stands out with +585% view growth and +180% comparison growth month-over-month — a concrete, checkable spike worth pairing with external context (a review, a price change, a launch) rather than treating as an isolated statistic.
+- The active catalog is not laptops-only: a small number of non-laptop devices (e.g. a phone) are present and classified under `Mobile Device`. Worth remembering when reading "product catalog" elsewhere in this project.
+
+### Product Detail
+
+![Product Detail page](docs/assets/report-product-detail.png)
+
+- Drillthrough from either page above lands here filtered to one product, showing its own interest score, view/comparison growth, missing specification fields, and a full monthly page-view trend rather than a single aggregated number.
+- The trend view is where a single-number KPI would have hidden the story: an early sharp spike followed by a long noisy tail is a very different shape than a flat average would suggest, and it invites a "what happened around that spike" follow-up question rather than a conclusion.
 
 ## Dataset provenance and attribution
 
@@ -185,7 +215,7 @@ Logic that is used by only one reporting mart is inlined directly into that mart
 | `mart_device_traffic` | One row per date and product | Product-detail views and viewing sessions |
 | `mart_compared_devices_daily` | One row per date and product | Daily comparison interest |
 | `mart_most_compared_devices` | One row per product | All-time comparison ranking derived from the daily mart |
-| `mart_product_interest` | One row per week and product | View/comparison interest score and segment |
+| `mart_product_interest` | One row per month and product | View/comparison interest score and segment |
 | `mart_comparison_segment_pairs` | One row per segment pair | Product segments commonly considered in the same session |
 | `mart_comparison_sort_criteria` | One row per segment pair, criterion, and direction | Specifications actively used to sort comparison tables |
 | `mart_product_data_quality_priority` | One row per active product | Product-data update priority |
@@ -217,15 +247,15 @@ This payload makes it possible to associate a sorting criterion with the exact p
 
 ### Product-data update priority
 
-The first scoring version combines:
+The current scoring version combines:
 
 ```text
 product interest
 + recent interest trend
-+ missing critical specifications
++ overall spec/content completeness
 ```
 
-This is an analytical heuristic and should be recalibrated after inspecting real distributions and receiving stakeholder feedback.
+Completeness is a single flat score across every genuine spec/content field (17 fields) — an earlier version ranked fields into critical/important/optional tiers, but that ranking had no defensible basis and was removed (see `DEVLOG.md`, 2026-08-26). This is still an analytical heuristic and should be recalibrated after inspecting real distributions and receiving stakeholder feedback.
 
 ## Repository structure
 
@@ -238,9 +268,11 @@ laplaptech-analysis/
 ├── DEVLOG.md
 ├── requirements.txt
 ├── docs/
-│   ├── assets/
-│   │   └── laplaptech-architecture.svg
-│   └── report-storytelling-plan.md
+│   └── assets/
+│       ├── laplaptech-architecture.svg
+│       ├── report-overview.png
+│       ├── report-product-interest.png
+│       └── report-product-detail.png
 ├── ingestion/
 │   └── clickhouse_to_bigquery.py
 └── dbt/
@@ -336,7 +368,7 @@ The workflow:
 
 Power BI and Looker Studio should read gold marts rather than raw or bronze models.
 
-For Power BI, Import mode is appropriate for the current project size. BigQuery and dbt define reusable grain and business logic; Power BI should handle relationships, filter-context measures, and visualization.
+The current report (see [Report preview](#report-preview)) uses Power BI in Import mode, which is appropriate for the current project size — BigQuery and dbt define reusable grain and business logic, while Power BI handles relationships, filter-context measures, and visualization on top of that.
 
 ## Data quality and tests
 
@@ -364,9 +396,8 @@ Important checks still include:
 - Replace append-only event ingestion with staging and `MERGE ON id`.
 - Add workflow concurrency protection.
 - Validate all dbt models against the live BigQuery schema.
-- Review score distributions and recalibrate weighting rules.
-- Build the Power BI semantic model and report pages.
-- Add report screenshots and final findings to this README.
+- Review `completeness_score` and `interest_score` distributions on real data and recalibrate the priority weighting.
+- Add a content inventory before attempting a real content-opportunity model.
 
 ## Support and contributions
 
@@ -385,8 +416,7 @@ The underlying LaplapTech dataset is separate from this repository. Its use rema
 ## Documentation
 
 - [Business and analytical context](context.md)
-- [Development log](DEVLOG.md)
-- [Report storytelling plan](docs/report-storytelling-plan.md)
+- [Development log](DEVLOG.md) — also holds the reporting narrative and Power BI page structure
 
 ## Acknowledgements and community
 
