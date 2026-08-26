@@ -23,11 +23,18 @@ WITH benchmark_coverage AS (
     GROUP BY laptop_model_id
 ),
 
+-- Fields counted toward completeness are limited to genuine product
+-- specs/content. Identity fields (id, name), audit fields (created_by_fk,
+-- changed_by_fk), status flags (is_active, is_visible, is_gaming_laptop,
+-- is_workstation, is_mobile_device), the derived usage_segment, and
+-- brand_model_codename (not every product has an official codename) are
+-- intentionally excluded — their absence does not represent a data gap.
 field_status AS (
     SELECT
         product.id AS device_id,
         product.name AS device_name,
         product.usage_segment,
+        product.year_introduce IS NULL AS missing_year_introduce,
         product.cpu_model_id IS NULL AS missing_cpu,
         product.gpu_model_id IS NULL AS missing_gpu,
         product.battery_capacity_whr IS NULL AS missing_battery,
@@ -51,26 +58,29 @@ field_status AS (
     WHERE product.is_active = 1
 ),
 
+-- Total number of fields checked above — keep in sync with the list.
 scored AS (
     SELECT
         *,
-        CAST(missing_cpu AS INT64)
+        CAST(missing_year_introduce AS INT64)
+            + CAST(missing_cpu AS INT64)
             + CAST(missing_gpu AS INT64)
             + CAST(missing_battery AS INT64)
             + CAST(missing_screen_width AS INT64)
-            + CAST(missing_screen_height AS INT64) AS missing_critical_fields,
-        CAST(missing_cpu_tdp AS INT64)
+            + CAST(missing_screen_height AS INT64)
+            + CAST(missing_cpu_tdp AS INT64)
             + CAST(missing_gpu_tdp AS INT64)
             + CAST(missing_screen_size AS INT64)
             + CAST(missing_screen_ppi AS INT64)
             + CAST(missing_laptop_weight AS INT64)
-            + CAST(missing_charger_weight AS INT64) AS missing_important_fields,
-        CAST(missing_thumbnail AS INT64)
+            + CAST(missing_charger_weight AS INT64)
+            + CAST(missing_thumbnail AS INT64)
             + CAST(missing_cpu_note AS INT64)
             + CAST(missing_gpu_note AS INT64)
             + CAST(missing_benchmark AS INT64)
-            + CAST(missing_review_video AS INT64) AS missing_optional_fields,
+            + CAST(missing_review_video AS INT64) AS missing_field_count,
         ARRAY_CONCAT(
+            IF(missing_year_introduce, ['year_introduce'], []),
             IF(missing_cpu, ['cpu_model_id'], []),
             IF(missing_gpu, ['gpu_model_id'], []),
             IF(missing_battery, ['battery_capacity_whr'], []),
@@ -96,14 +106,8 @@ completeness AS (
         device_id,
         device_name,
         usage_segment,
-        missing_critical_fields,
-        missing_important_fields,
-        missing_optional_fields,
-        1 - SAFE_DIVIDE(missing_critical_fields, 5) AS critical_completeness_score,
-        1 - SAFE_DIVIDE(
-            missing_critical_fields + missing_important_fields + missing_optional_fields,
-            16
-        ) AS overall_completeness_score,
+        missing_field_count,
+        1 - SAFE_DIVIDE(missing_field_count, 17) AS completeness_score,
         ARRAY_TO_STRING(missing_fields, ', ') AS missing_field_list
     FROM scored
 ),
@@ -119,11 +123,8 @@ combined AS (
         completeness.device_id,
         completeness.device_name,
         completeness.usage_segment,
-        completeness.missing_critical_fields,
-        completeness.missing_important_fields,
-        completeness.missing_optional_fields,
-        completeness.critical_completeness_score,
-        completeness.overall_completeness_score,
+        completeness.missing_field_count,
+        completeness.completeness_score,
         completeness.missing_field_list,
         COALESCE(interest.interest_score, 0) AS interest_score,
         interest.view_growth_rate,
@@ -147,7 +148,7 @@ with_priority AS (
         *,
         0.45 * interest_score
             + 0.20 * trend_score
-            + 0.35 * (1 - critical_completeness_score)
+            + 0.35 * (1 - completeness_score)
             AS data_update_priority_score
     FROM ranked
 )
@@ -155,11 +156,11 @@ with_priority AS (
 SELECT
     *,
     CASE
-        WHEN interest_score >= 0.5 AND critical_completeness_score < 0.8
+        WHEN interest_score >= 0.5 AND completeness_score < 0.8
             THEN 'Update Now'
-        WHEN interest_score >= 0.5 AND critical_completeness_score >= 0.8
+        WHEN interest_score >= 0.5 AND completeness_score >= 0.8
             THEN 'Maintain'
-        WHEN interest_score < 0.5 AND critical_completeness_score < 0.8
+        WHEN interest_score < 0.5 AND completeness_score < 0.8
             THEN 'Monitor'
         ELSE 'Low Priority'
     END AS priority_group
