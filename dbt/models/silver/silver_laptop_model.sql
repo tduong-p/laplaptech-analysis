@@ -23,10 +23,10 @@ SELECT
     brand_model_codename,
     thumbnail_image_url,
     CASE
-        WHEN COALESCE(CAST(is_gaming_laptop AS BOOL), FALSE) THEN 'gaming_laptop'
-        WHEN COALESCE(CAST(is_workstation AS BOOL), FALSE) THEN 'workstation'
-        WHEN COALESCE(CAST(is_mobile_device AS BOOL), FALSE) THEN 'mobile_device'
-        ELSE 'general_laptop'
+        WHEN COALESCE(CAST(is_gaming_laptop AS BOOL), FALSE) THEN 'Gaming Laptop'
+        WHEN COALESCE(CAST(is_workstation AS BOOL), FALSE) THEN 'Workstation'
+        WHEN COALESCE(CAST(is_mobile_device AS BOOL), FALSE) THEN 'Mobile Device'
+        ELSE 'General Laptop'
     END AS usage_segment,
     CAST(COALESCE(CAST(is_active AS BOOL), FALSE) AS INT64) AS is_active,
     CAST(COALESCE(CAST(is_visible AS BOOL), FALSE) AS INT64) AS is_visible,

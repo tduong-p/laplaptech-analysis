@@ -85,4 +85,4 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: [update_now, maintain, monitor, low_priority]
+                values: ["Update Now", "Maintain", "Monitor", "Low Priority"]

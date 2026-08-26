@@ -156,12 +156,12 @@ SELECT
     *,
     CASE
         WHEN interest_score >= 0.5 AND critical_completeness_score < 0.8
-            THEN 'update_now'
+            THEN 'Update Now'
         WHEN interest_score >= 0.5 AND critical_completeness_score >= 0.8
-            THEN 'maintain'
+            THEN 'Maintain'
         WHEN interest_score < 0.5 AND critical_completeness_score < 0.8
-            THEN 'monitor'
-        ELSE 'low_priority'
+            THEN 'Monitor'
+        ELSE 'Low Priority'
     END AS priority_group
 FROM with_priority
 ORDER BY data_update_priority_score DESC

@@ -77,12 +77,12 @@ SELECT
     0.5 * view_percentile + 0.5 * comparison_percentile AS interest_score,
     CASE
         WHEN view_percentile >= 0.5 AND comparison_percentile >= 0.5
-            THEN 'high_view_high_comparison'
+            THEN 'High View · High Comparison'
         WHEN view_percentile >= 0.5 AND comparison_percentile < 0.5
-            THEN 'high_view_low_comparison'
+            THEN 'High View · Low Comparison'
         WHEN view_percentile < 0.5 AND comparison_percentile >= 0.5
-            THEN 'low_view_high_comparison'
-        ELSE 'low_view_low_comparison'
+            THEN 'Low View · High Comparison'
+        ELSE 'Low View · Low Comparison'
     END AS interest_segment
 FROM scored
 ORDER BY period_start DESC, interest_score DESC
