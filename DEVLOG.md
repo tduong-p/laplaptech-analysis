@@ -710,7 +710,7 @@ Completeness shows whether the website can satisfy that demand.
 
 `mart_product_data_quality_priority` previously grouped completeness fields into `critical` / `important` / `optional` tiers, each with a hand-picked weight. On review, there was no defensible basis for ranking one missing field as more important than another — the tiering was an implementation-time judgment call, not something derived from data or confirmed by the LaplapTech team. It was removed.
 
-The mart now computes a single `completeness_score`: 1 minus the share of missing fields across a flat list of 17 genuine product-spec/content fields. `priority_group` and `data_update_priority_score` both read from this one score instead of the old `critical_completeness_score`.
+The mart now computes a single `completeness_score`: 1 minus the share of missing fields across a flat list of 15 genuine product-spec/content fields. `priority_group` and `data_update_priority_score` both read from this one score instead of the old `critical_completeness_score`.
 
 `year_introduce` was added to the tracked fields — it is a real spec that can be missing and was previously not checked at all.
 

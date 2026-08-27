@@ -251,7 +251,7 @@ product interest
 + overall spec/content completeness
 ```
 
-Completeness is a single flat score across every genuine spec/content field (17 fields) — an earlier version ranked fields into critical/important/optional tiers, but that ranking had no defensible basis, so it was deliberately cut in favor of a simpler, more honest measure (see `DEVLOG.md`, 2026-08-26). The weighting is a first-pass heuristic by design: it favors a defensible, explainable starting point over a statistically tuned one, and gets recalibrated as real usage data accumulates.
+Completeness is a single flat score across every genuine spec/content field (15 fields) — an earlier version ranked fields into critical/important/optional tiers, but that ranking had no defensible basis, so it was deliberately cut in favor of a simpler, more honest measure (see `DEVLOG.md`, 2026-08-26). The weighting is a first-pass heuristic by design: it favors a defensible, explainable starting point over a statistically tuned one, and gets recalibrated as real usage data accumulates.
 
 ## Repository structure
 

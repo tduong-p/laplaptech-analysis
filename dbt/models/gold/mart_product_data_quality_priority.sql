@@ -26,9 +26,11 @@ WITH benchmark_coverage AS (
 -- Fields counted toward completeness are limited to genuine product
 -- specs/content. Identity fields (id, name), audit fields (created_by_fk,
 -- changed_by_fk), status flags (is_active, is_visible, is_gaming_laptop,
--- is_workstation, is_mobile_device), the derived usage_segment, and
--- brand_model_codename (not every product has an official codename) are
--- intentionally excluded — their absence does not represent a data gap.
+-- is_workstation, is_mobile_device), the derived usage_segment,
+-- brand_model_codename (not every product has an official codename), and
+-- cpu_note/gpu_note (free-text annotations most products simply have
+-- nothing special to add) are intentionally excluded — their absence does
+-- not represent a data gap.
 field_status AS (
     SELECT
         product.id AS device_id,
@@ -48,8 +50,6 @@ field_status AS (
         product.charger_weight IS NULL AS missing_charger_weight,
         product.thumbnail_image_url IS NULL
             OR TRIM(product.thumbnail_image_url) = '' AS missing_thumbnail,
-        product.cpu_note IS NULL OR TRIM(product.cpu_note) = '' AS missing_cpu_note,
-        product.gpu_note IS NULL OR TRIM(product.gpu_note) = '' AS missing_gpu_note,
         COALESCE(benchmark.has_benchmark, 0) = 0 AS missing_benchmark,
         COALESCE(benchmark.has_review_video, 0) = 0 AS missing_review_video
     FROM {{ ref('silver_laptop_model') }} AS product
@@ -75,8 +75,6 @@ scored AS (
             + CAST(missing_laptop_weight AS INT64)
             + CAST(missing_charger_weight AS INT64)
             + CAST(missing_thumbnail AS INT64)
-            + CAST(missing_cpu_note AS INT64)
-            + CAST(missing_gpu_note AS INT64)
             + CAST(missing_benchmark AS INT64)
             + CAST(missing_review_video AS INT64) AS missing_field_count,
         ARRAY_CONCAT(
@@ -93,8 +91,6 @@ scored AS (
             IF(missing_laptop_weight, ['laptop_weight'], []),
             IF(missing_charger_weight, ['charger_weight'], []),
             IF(missing_thumbnail, ['thumbnail_image_url'], []),
-            IF(missing_cpu_note, ['cpu_note'], []),
-            IF(missing_gpu_note, ['gpu_note'], []),
             IF(missing_benchmark, ['benchmark_result'], []),
             IF(missing_review_video, ['review_video_url'], [])
         ) AS missing_fields
@@ -107,7 +103,7 @@ completeness AS (
         device_name,
         usage_segment,
         missing_field_count,
-        1 - SAFE_DIVIDE(missing_field_count, 17) AS completeness_score,
+        1 - SAFE_DIVIDE(missing_field_count, 15) AS completeness_score,
         ARRAY_TO_STRING(missing_fields, ', ') AS missing_field_list
     FROM scored
 ),
