@@ -1,4 +1,4 @@
-clickhouse_da_pipeline:
+laplaptech_pipeline:
   target: bigquery
   outputs:
     bigquery:

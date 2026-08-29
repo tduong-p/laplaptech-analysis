@@ -74,6 +74,19 @@ models:
           - not_null
           - unique
 
+  - name: mart_behavior_funnel_by_platform
+    description: One row per cohort date, device category, and funnel step; funnel conversion and drop-off split by platform.
+    columns:
+      - name: cohort_date
+        data_tests:
+          - not_null
+      - name: device_category
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [Mobile, Desktop, Other]
+
   - name: mart_product_data_quality_priority
     description: Product update priority based on interest, trend, and data completeness.
     columns:

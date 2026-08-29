@@ -161,7 +161,7 @@ Two possible funnel definitions were considered:
 1. **Presence funnel:** a session contains all relevant event names, regardless of order.
 2. **Sequential funnel:** each next event occurs at or after the previous event.
 
-The implemented funnel is sequential because it better represents progression. Each session is counted at most once per step.
+The funnel was originally implemented as sequential. It was later rebuilt as a presence/reach funnel instead (see the 2026-08-26 report entry below) — each step counts a session if it contains at least one matching event, regardless of order relative to other steps. The reach-based version is what `silver_session_funnel` and both funnel marts implement today; this section is kept as-is to preserve the original reasoning trail. Each session is counted at most once per step.
 
 Important interpretation:
 
@@ -748,6 +748,20 @@ A working Power BI report was built directly against the Gold marts: an Overview
 - The active catalog includes a few non-laptop devices (e.g., a phone) classified under `Mobile Device` — a reminder that "product catalog" here is broader than laptops alone.
 
 These are first impressions from one time window, not validated findings — see `context.md` for why the catalog and this reasoning should not be generalized to the broader market.
+
+## 2026-08-29 - Added a platform-segmented behavior funnel mart
+
+### Decision
+
+`mart_behavior_funnel_by_platform` was added to answer whether funnel drop-off differs by device platform, extending the OS ad hoc (2026-08-17) into the funnel itself rather than leaving OS and funnel as two separate marts a report author has to join manually.
+
+The mart reuses `silver_session_funnel`, joins to `mart_user_os` (deduplicated to one `os_name` per session), and buckets `os_name` into `Mobile` (iOS, Android), `Desktop` (Windows, Mac OS), or `Other`. It follows the same reach-based, long-format shape as `mart_behavior_funnel_daily` (one row per funnel step, with `entry_sessions`, `previous_step_sessions`, and both conversion-rate columns precomputed).
+
+The mart initially grouped only by `device_category`, with no date column — it could not be filtered by the same date range as the rest of the report. `cohort_date` and a monthly `period_start` (matching `mart_product_interest`'s grain) were added immediately after so this mart can share a Power BI date table with every other mart instead of always reporting an all-time total.
+
+### Known caveat carried over from the daily funnel
+
+Because the funnel is reach-based, the precomputed `conversion_from_entry_rate` and `conversion_from_previous_rate` columns are not safe to sum or average across multiple `cohort_date` rows in a BI tool — only `sessions_reached` is additive. A report should recompute the rate from `SUM(sessions_reached)` in a measure rather than aggregating the stored rate column directly, or the number will silently disagree with a funnel visual built from the same table.
 
 ## Open technical and analytical items
 

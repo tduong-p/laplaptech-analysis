@@ -195,7 +195,7 @@ Eleven views standardize product entities, Boolean fields, timestamps, event att
 | `silver_user_event_tracking` | One row per event | Standardized timestamps plus parsed `page_name`, `device_id`, and `behavior_group` |
 | `silver_device_traffic_event` | One row per valid DeviceDetail event | Product-detail traffic events |
 | `silver_session_activity` | One row per session | Session activity and behavioral flags |
-| `silver_session_funnel` | One row per DeviceDetail session | Ordered funnel step timestamps |
+| `silver_session_funnel` | One row per DeviceDetail session | Reach flag per funnel step (not strictly ordered) |
 | `silver_comparison_session_device` | One row per session and device | Distinct devices involved in comparison sessions |
 | `silver_comparison_sort_event` | One row per sort event | Exact `device_ids`, `sort_by`, and `sort_direction` |
 | Plus five dimension and benchmark views | Source entity | Brand, CPU, GPU, laptop master, and benchmark results |
@@ -208,6 +208,7 @@ Logic that is used by only one reporting mart is inlined directly into that mart
 |---|---|---|
 | `mart_daily_site_kpis` | One row per date | Website traffic, user, session, discovery, and comparison KPIs |
 | `mart_behavior_funnel_daily` | One row per date and funnel step | Funnel conversion and drop-off |
+| `mart_behavior_funnel_by_platform` | One row per date, device category, and funnel step | Funnel conversion and drop-off split by Mobile/Desktop/Other |
 | `mart_device_traffic` | One row per date and product | Product-detail views and viewing sessions |
 | `mart_compared_devices_daily` | One row per date and product | Daily comparison interest |
 | `mart_most_compared_devices` | One row per product | All-time comparison ranking derived from the daily mart |

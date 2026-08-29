@@ -142,6 +142,7 @@ The project produces Gold marts for:
 
 - Daily website KPIs.
 - Behavioral funnel performance.
+- Behavioral funnel performance by device platform (mobile/desktop).
 - Product-detail traffic.
 - Most-compared products.
 - Monthly product interest and trend.

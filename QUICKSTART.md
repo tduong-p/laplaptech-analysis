@@ -31,9 +31,9 @@ GCP_PROJECT_ID
 GCP_SERVICE_ACCOUNT_JSON
 BIGQUERY_LOCATION
 BIGQUERY_DBT_DATASET
-LAPLAPTECH_SOURCE_DATABASE
-LAPLAPTECH_SOURCE_SCHEMA
 ```
+
+`LAPLAPTECH_SOURCE_DATABASE` and `LAPLAPTECH_SOURCE_SCHEMA` are separate — they configure the dbt `source()` declarations in `dbt/models/sources.yml`, not the Python ingestion job. Set them alongside the variables above before running `dbt build`.
 
 Do not commit service-account keys or database credentials.
 
