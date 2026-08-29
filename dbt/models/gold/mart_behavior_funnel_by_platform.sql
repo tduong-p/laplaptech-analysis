@@ -1,6 +1,6 @@
 {{ config(materialized='table') }}
 
--- Grain: one row per device_category and funnel_step.
+-- Grain: one row per cohort_date, device_category, and funnel_step.
 -- Same reach-based definition as mart_behavior_funnel_daily: each step counts
 -- sessions containing at least one event of that type, regardless of order.
 WITH session_os AS (
@@ -17,6 +17,7 @@ WITH session_os AS (
 session_with_platform AS (
     SELECT
         funnel.session_id,
+        funnel.cohort_date,
         CASE
             WHEN os.os_name IN ('iOS', 'Android') THEN 'Mobile'
             WHEN os.os_name IN ('Windows', 'Mac OS') THEN 'Desktop'
@@ -34,6 +35,7 @@ session_with_platform AS (
 
 category_counts AS (
     SELECT
+        cohort_date,
         device_category,
         COUNTIF(reached_device_view)            AS step_1_sessions,
         COUNTIF(reached_discovery)               AS step_2_sessions,
@@ -41,11 +43,12 @@ category_counts AS (
         COUNTIF(reached_select_for_comparison)   AS step_4_sessions,
         COUNTIF(reached_comparison_sort)         AS step_5_sessions
     FROM session_with_platform
-    GROUP BY device_category
+    GROUP BY cohort_date, device_category
 ),
 
 funnel_long AS (
     SELECT
+        cohort_date,
         device_category,
         funnel_step,
         step_name,
@@ -64,17 +67,19 @@ with_bases AS (
     SELECT
         *,
         FIRST_VALUE(sessions_reached) OVER (
-            PARTITION BY device_category
+            PARTITION BY cohort_date, device_category
             ORDER BY funnel_step
         ) AS entry_sessions,
         LAG(sessions_reached) OVER (
-            PARTITION BY device_category
+            PARTITION BY cohort_date, device_category
             ORDER BY funnel_step
         ) AS previous_step_sessions
     FROM funnel_long
 )
 
 SELECT
+    cohort_date,
+    DATE_TRUNC(cohort_date, MONTH) AS period_start,
     device_category,
     funnel_step,
     step_name,
@@ -85,4 +90,4 @@ SELECT
     IF(funnel_step = 1, 1.0, SAFE_DIVIDE(sessions_reached, previous_step_sessions))
         AS conversion_from_previous_rate
 FROM with_bases
-ORDER BY device_category, funnel_step
+ORDER BY cohort_date DESC, device_category, funnel_step
